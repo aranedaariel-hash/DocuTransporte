@@ -307,7 +307,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <script>
 // ══ CREDENCIALES ══
 const CLIENT_ID = '491607847299-lo03fhrvlgkc8v31a1sl62qv82v9j3c9.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/cloud-vision';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 const DRIVE_FOLDER_NAME = 'Documentacion-Transporte';
 const STATE_FILE_NAME = 'estado.json';
 
@@ -423,16 +423,32 @@ async function driveRequest(url, options={}){
     ...options,
     headers: {'Authorization': `Bearer ${accessToken}`, ...(options.headers||{})}
   });
-  if(res.status===401){ signOut(); throw new Error('Token expirado'); }
+  if(res.status===401){
+    accessToken = null;
+    updateAuthUI(false);
+    throw new Error('Token expirado, reconectá');
+  }
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Error ${res.status}: ${errText.substring(0,100)}`);
+  }
   return res;
 }
 
 async function initDrive(){
   try {
-    // Get user info
-    const uRes = await driveRequest('https://www.googleapis.com/oauth2/v1/userinfo');
-    const uData = await uRes.json();
-    updateAuthUI(true, uData.email||'');
+    // Get user info - optional, don't fail if it errors
+    let email = '';
+    try {
+      const uRes = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+        headers:{'Authorization': `Bearer ${accessToken}`}
+      });
+      if(uRes.ok){
+        const uData = await uRes.json();
+        email = uData.email||'';
+      }
+    } catch(e){}
+    updateAuthUI(true, email);
 
     // Find or create root folder
     const searchRes = await driveRequest(
@@ -446,8 +462,7 @@ async function initDrive(){
     }
 
     // Create subfolders
-    for(const sec of ['Choferes','Tractores','Semis','Transportes']){
-      const key = Object.keys(SUBFOLDER).find(k=>SUBFOLDER[k]===sec);
+    for(const [key, sec] of Object.entries(SUBFOLDER)){
       const sfRes = await driveRequest(
         `https://www.googleapis.com/drive/v3/files?q=name='${sec}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
       );
@@ -464,6 +479,7 @@ async function initDrive(){
     showToast('✓ Drive conectado correctamente');
   } catch(e){
     showToast('Error conectando con Drive: '+e.message);
+    console.error(e);
   }
 }
 
