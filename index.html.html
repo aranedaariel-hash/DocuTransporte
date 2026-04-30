@@ -134,6 +134,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .filter-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font);white-space:nowrap;min-width:72px;transition:all .15s;}
 .filter-btn.selected{border-color:var(--accent);background:rgba(59,130,246,0.1);color:var(--accent);}
 .filter-preview{width:40px;height:28px;border-radius:4px;border:1px solid var(--border2);}
+/* RESUME VIEW */
+.ver-header{padding:20px 16px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+.ver-entity-name{font-size:20px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.ver-entity-sub{font-size:12px;color:var(--text2);font-family:var(--mono);}
+.ver-status{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;}
+.ver-status-ok{background:var(--ok-bg);color:var(--ok);}
+.ver-status-bad{background:var(--bad-bg);color:var(--bad);}
+.ver-doc{border-bottom:1px solid var(--border);background:var(--surface);}
+.ver-doc-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.ver-doc-name{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+.ver-preview{width:100%;max-height:500px;object-fit:contain;background:#111;display:block;}
+.ver-doc-actions{padding:10px 16px 14px;display:flex;gap:8px;}
+.ver-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:12px;color:var(--text2);cursor:pointer;text-decoration:none;font-family:var(--font);}
+.ver-btn-accent{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.08);color:var(--accent);}
+.ver-no-doc{padding:12px 16px 16px;font-size:12px;color:var(--text3);font-style:italic;}
 </style>
 </head>
 <body>
@@ -355,6 +370,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <div class="topbar-info"><div class="topbar-title" id="new-title">—</div></div>
   </div>
   <div style="overflow-y:auto;flex:1;" id="new-form-body"></div>
+</div>
+
+<!-- ══ VISTA RESUMEN ══ -->
+<div class="screen" id="s-ver">
+  <div style="overflow-y:auto;flex:1;background:var(--bg);" id="ver-content">
+    <div style="padding:40px 20px;text-align:center;color:var(--text3);">Cargando…</div>
+  </div>
 </div>
 
 </div>
@@ -769,6 +791,15 @@ function formatVto(vto){
   return `${d}/${m}/${y}`;
 }
 
+function getResumeUrl(sec, id){
+  return `${window.location.origin}${window.location.pathname}?ver=${sec}&id=${id}`;
+}
+
+function copyResumeUrl(){
+  const url = getResumeUrl(currentSection, currentEntityId);
+  navigator.clipboard.writeText(url).then(()=>showToast('✓ URL copiada al portapapeles'));
+}
+
 function renderDetail(){
   const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
   if(!e) return;
@@ -777,7 +808,18 @@ function renderDetail(){
   const opt=docs.filter(d=>!d.required);
   const loaded_opt=opt.filter(d=>e.docs[d.id]);
   const pending_opt=opt.filter(d=>!e.docs[d.id]);
-  let html='<div class="doc-section-title">Obligatorios</div>';
+
+  // URL de resumen
+  const resumeUrl = getResumeUrl(currentSection, currentEntityId);
+  let html=`<div style="margin:12px 16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);display:flex;align-items:center;gap:10px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">URL Resumen para ALET</div>
+      <div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);">${resumeUrl}</div>
+    </div>
+    <button onclick="copyResumeUrl()" style="padding:7px 12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font);">Copiar</button>
+  </div>`;
+
+  html+='<div class="doc-section-title">Obligatorios</div>';
   req.forEach(doc=>{ html+=renderDocCard(doc,e.docs[doc.id]); });
   if(loaded_opt.length){ html+='<div class="doc-section-title">Opcionales</div>'; loaded_opt.forEach(doc=>{ html+=renderDocCard(doc,e.docs[doc.id]); }); }
   pending_opt.forEach(doc=>{
@@ -884,6 +926,24 @@ function updateFilename(){
   document.getElementById('ocr-filename').textContent=`${prefix}_${currentDoc.docId.toUpperCase()}_vto-${d}-${m}-${y}.pdf`;
 }
 
+async function generatePreviewJPG(imageFile, filename){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(imageFile);
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      const MAX = 1200;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      canvas.width  = img.width  * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(resolve, 'image/jpeg', 0.82);
+    };
+    img.src = url;
+  });
+}
+
 async function confirmUpload(){
   if(!capturedPages.length){ showToast('⚠️ Primero cargá el documento'); return; }
   const dv=document.getElementById('ocr-date').value;
@@ -893,29 +953,59 @@ async function confirmUpload(){
   const statusEl=document.getElementById('upload-status');
 
   if(!accessToken){
-    // Guardar solo local si no hay Drive
     const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
-    e.docs[currentDoc.docId]={vto:dv,file:filename,driveUrl:'#'};
-    updateCounts(); showToast('Guardado localmente (sin Drive)');
+    e.docs[currentDoc.docId]={vto:dv,file:filename,driveUrl:'#',previewUrl:''};
+    saveDB(); updateCounts(); showToast('Guardado localmente (sin Drive)');
     setTimeout(()=>{ showScreen('s-detail'); renderDetail(); },1000);
     return;
   }
 
   btn.disabled=true;
   btn.innerHTML='<div class="spinner"></div> Subiendo a Drive…';
-  statusEl.textContent='Preparando archivo…';
 
   try {
     const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
     statusEl.textContent='Buscando carpeta en Drive…';
     const folderId=await getOrCreateEntityFolder(e.label, currentSection);
+
+    // Upload main file
     statusEl.textContent='Subiendo archivo…';
     const uploadedFile=await uploadFileToDrive(capturedPages[0], filename, folderId);
-    e.docs[currentDoc.docId]={vto:dv,file:filename,driveUrl:uploadedFile.webViewLink||'#'};
+    const driveUrl = uploadedFile.webViewLink||'#';
+    const fileId   = uploadedFile.id||'';
+
+    // Generate and upload preview JPG
+    let previewUrl = '';
+    try {
+      statusEl.textContent='Generando preview…';
+      const srcFile = capturedPages[0];
+      const previewBlob = srcFile.type.startsWith('image/')
+        ? await generatePreviewJPG(srcFile, filename)
+        : null;
+      if(previewBlob){
+        const previewName = filename.replace(/\.pdf$/i, '_preview.jpg');
+        const previewFile = new File([previewBlob], previewName, {type:'image/jpeg'});
+        const uploaded = await uploadFileToDrive(previewFile, previewName, folderId);
+        // Make preview publicly readable
+        if(uploaded.id){
+          await fetch(`https://www.googleapis.com/drive/v3/files/${uploaded.id}/permissions`, {
+            method:'POST',
+            headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+            body: JSON.stringify({role:'reader', type:'anyone'})
+          });
+          previewUrl = `https://drive.google.com/thumbnail?id=${uploaded.id}&sz=w800`;
+        }
+      }
+    } catch(e){ console.warn('Preview generation failed', e); }
+
+    e.docs[currentDoc.docId]={vto:dv, file:filename, driveUrl, fileId, previewUrl};
     statusEl.textContent='Guardando estado…';
     await saveStateToDrive();
     updateCounts();
     showToast('✓ Subido a Drive correctamente');
+    btn.disabled=false;
+    btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar y subir a Drive';
+    statusEl.textContent='';
     setTimeout(()=>{ showScreen('s-detail'); renderDetail(); },1000);
   } catch(err){
     btn.disabled=false;
@@ -1205,9 +1295,84 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
+// ══ VISTA RESUMEN ══
+function renderVerScreen(sec, entityId){
+  applyTheme();
+  const secData = db[sec] || [];
+  const e = secData.find(x=>x.id===entityId);
+  const content = document.getElementById('ver-content');
+  if(!e){
+    content.innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+      <div style="font-size:40px;margin-bottom:16px;">🔍</div>
+      <p style="font-size:16px;">No se encontró la entidad.<br>Verificá la URL.</p>
+    </div>`;
+    return;
+  }
+  const docs = DOCS[sec] || [];
+  const allDocs = docs.filter(d=>d.required);
+  const optDocs = docs.filter(d=>!d.required && e.docs[d.id]);
+  const allVisible = [...allDocs, ...optDocs];
+  const anyBad = allVisible.some(d=>!e.docs[d.id]||isVencido(e.docs[d.id].vto));
+  const statusHtml = anyBad
+    ? `<div class="ver-status ver-status-bad">🔴 Documentación vencida o incompleta</div>`
+    : `<div class="ver-status ver-status-ok">🟢 Documentación al día</div>`;
+
+  const secLabel = {chofer:'Transportista',tractor:'Tractor',semi:'Semirremolque',transporte:'Empresa de transporte'}[sec]||sec;
+
+  let html = `<div class="ver-header">
+    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${secLabel}</div>
+    <div class="ver-entity-name">${e.label}</div>
+    <div class="ver-entity-sub">${e.sub||''}</div>
+    ${statusHtml}
+  </div>`;
+
+  allVisible.forEach(doc=>{
+    const data = e.docs[doc.id];
+    const vencido = !data || isVencido(data.vto);
+    const dot = vencido ? 'dot-bad':'dot-ok';
+    const badge = vencido
+      ? `<span class="badge badge-bad">${data?'Venció '+formatVto(data.vto):'Sin cargar'}</span>`
+      : `<span class="badge badge-ok">Vence ${formatVto(data.vto)}</span>`;
+    const driveBtn = data && data.driveUrl && data.driveUrl!=='#'
+      ? `<a href="${data.driveUrl}" target="_blank" class="ver-btn ver-btn-accent">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ver PDF en Drive</a>` : '';
+    const previewHtml = data && data.previewUrl
+      ? `<img class="ver-preview" src="${data.previewUrl}" alt="${doc.name}" loading="lazy">`
+      : data ? `<div style="padding:20px;text-align:center;background:var(--bg2);color:var(--text3);font-size:12px;">Preview no disponible · ${data.file||''}</div>` : '';
+
+    html += `<div class="ver-doc">
+      <div class="ver-doc-header">
+        <div class="ver-doc-name"><div class="status-dot ${dot}"></div>${doc.name}</div>
+        ${badge}
+      </div>
+      ${previewHtml}
+      ${data ? `<div class="ver-doc-actions">${driveBtn}</div>` : `<div class="ver-no-doc">Sin documento cargado</div>`}
+    </div>`;
+  });
+
+  html += `<div style="padding:20px;text-align:center;font-size:11px;color:var(--text3);">DocuTransporte · Pregate<br>Última actualización: ${new Date().toLocaleDateString('es-AR')}</div>`;
+  content.innerHTML = html;
+}
+
 // ══ INIT ══
 updateCounts();
-checkTokenFromUrl();
+
+// Detectar si es vista resumen por URL
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const ver = params.get('ver');
+  const id  = params.get('id');
+  if(ver && id){
+    // Load state from localStorage and show resume
+    const saved = localStorage.getItem('dct-db');
+    if(saved){ try{ Object.assign(db, JSON.parse(saved)); }catch(e){} }
+    showScreen('s-ver');
+    renderVerScreen(ver, id);
+  } else {
+    checkTokenFromUrl();
+  }
+})();
 </script>
 </body>
 </html>
