@@ -127,6 +127,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* EDITOR */
+.crop-point{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:translate(-50%,-50%);cursor:grab;z-index:10;touch-action:none;}
+.crop-point:active{cursor:grabbing;transform:translate(-50%,-50%) scale(1.2);}
+.filter-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font);white-space:nowrap;min-width:72px;transition:all .15s;}
+.filter-btn.selected{border-color:var(--accent);background:rgba(59,130,246,0.1);color:var(--accent);}
+.filter-preview{width:40px;height:28px;border-radius:4px;border:1px solid var(--border2);}
 </style>
 </head>
 <body>
@@ -290,6 +297,59 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="btn-primary" id="btn-upload" onclick="confirmUpload()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       Confirmar y subir a Drive
+    </button>
+  </div>
+</div>
+
+<!-- ══ EDITOR DE IMAGEN ══ -->
+<div class="screen" id="s-editor">
+  <div class="topbar">
+    <button class="topbar-back" onclick="cancelEditor()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info">
+      <div class="topbar-title">Editar documento</div>
+      <div class="topbar-sub">Recortá y aplicá filtro</div>
+    </div>
+    <button class="icon-btn" onclick="rotateImage()" title="Rotar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+  </div>
+  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+    <!-- Canvas de edición -->
+    <div style="position:relative;background:#000;flex-shrink:0;" id="editor-wrap">
+      <canvas id="canvas-display" style="width:100%;display:block;touch-action:none;"></canvas>
+      <!-- Puntos de recorte -->
+      <div class="crop-point" id="cp-tl" data-corner="0"></div>
+      <div class="crop-point" id="cp-tr" data-corner="1"></div>
+      <div class="crop-point" id="cp-br" data-corner="2"></div>
+      <div class="crop-point" id="cp-bl" data-corner="3"></div>
+      <svg id="crop-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
+    </div>
+
+    <!-- Filtros -->
+    <div style="padding:12px 16px 8px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);">Filtro</div>
+    <div style="display:flex;gap:8px;padding:0 16px 14px;overflow-x:auto;">
+      <button class="filter-btn selected" id="f-original" onclick="applyFilter('original')">
+        <div class="filter-preview" style="background:linear-gradient(135deg,#888,#ddd);"></div>
+        <span>Original</span>
+      </button>
+      <button class="filter-btn" id="f-doc" onclick="applyFilter('doc')">
+        <div class="filter-preview" style="background:linear-gradient(135deg,#000,#fff);"></div>
+        <span>Documento</span>
+      </button>
+      <button class="filter-btn" id="f-bw" onclick="applyFilter('bw')">
+        <div class="filter-preview" style="background:linear-gradient(135deg,#333,#ccc);"></div>
+        <span>B&N</span>
+      </button>
+      <button class="filter-btn" id="f-bright" onclick="applyFilter('bright')">
+        <div class="filter-preview" style="background:linear-gradient(135deg,#aaa,#fff);"></div>
+        <span>Claro</span>
+      </button>
+    </div>
+
+    <canvas id="canvas-hidden" style="display:none;"></canvas>
+    <button class="btn-primary" onclick="confirmEditor()" style="margin-bottom:20px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Usar esta imagen
     </button>
   </div>
 </div>
@@ -786,14 +846,30 @@ function triggerCapture(){ document.getElementById(inputMode==='cam'?'file-cam':
 
 function handleFile(input){
   const f=input.files[0]; if(!f) return;
-  capturedPages=[f]; renderPages();
-  if(accessToken && f.type.startsWith('image/')) runOCR(f);
-  else showToast('PDF cargado · ingresá fecha manualmente');
   input.value='';
+  if(f.type.startsWith('image/')){
+    // Open editor for images
+    openEditor(f, (editedFile)=>{
+      capturedPages=[editedFile];
+      renderPages();
+      if(accessToken) runOCR(editedFile);
+    });
+  } else {
+    // PDF - add directly without editor
+    capturedPages=[f]; renderPages();
+    showToast('PDF cargado · ingresá fecha manualmente');
+  }
 }
 function handlePage(input){
   const f=input.files[0]; if(!f) return;
-  capturedPages.push(f); renderPages(); input.value='';
+  input.value='';
+  if(f.type.startsWith('image/')){
+    openEditor(f, (editedFile)=>{
+      capturedPages.push(editedFile); renderPages();
+    });
+  } else {
+    capturedPages.push(f); renderPages();
+  }
 }
 function renderPages(){
   const strip=document.getElementById('pages-strip');
@@ -913,6 +989,183 @@ async function saveNew(){
   updateCounts();
   showToast('✓ Guardado correctamente');
   setTimeout(()=>{ openEntity(entry.id); },600);
+}
+
+// ══ IMAGE EDITOR ══
+let editorImg = null;
+let editorRotation = 0;
+let editorFilter = 'original';
+let cropPoints = []; // [{x,y}] in display %
+let draggingCorner = -1;
+let editorCallback = null;
+
+function openEditor(file, callback){
+  editorCallback = callback;
+  editorRotation = 0;
+  editorFilter = 'original';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      editorImg = img;
+      // Init crop points at 10% inset
+      cropPoints = [{x:10,y:10},{x:90,y:10},{x:90,y:90},{x:10,y:90}];
+      renderEditor();
+      showScreen('s-editor');
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('selected'));
+      document.getElementById('f-original').classList.add('selected');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderEditor(){
+  if(!editorImg) return;
+  const wrap = document.getElementById('editor-wrap');
+  const canvas = document.getElementById('canvas-display');
+  const ww = wrap.clientWidth || window.innerWidth;
+  let iw = editorImg.naturalWidth, ih = editorImg.naturalHeight;
+  if(editorRotation % 180 !== 0){ [iw,ih]=[ih,iw]; }
+  const scale = ww / iw;
+  const ch = ih * scale;
+  canvas.width = iw;
+  canvas.height = ih;
+  canvas.style.height = ch + 'px';
+  wrap.style.height = ch + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.translate(iw/2, ih/2);
+  ctx.rotate(editorRotation * Math.PI/180);
+  const dw = editorRotation%180!==0 ? editorImg.naturalHeight : editorImg.naturalWidth;
+  const dh = editorRotation%180!==0 ? editorImg.naturalWidth : editorImg.naturalHeight;
+  ctx.drawImage(editorImg, -dw/2, -dh/2);
+  ctx.restore();
+  applyFilterToCanvas(ctx, iw, ih);
+  updateCropOverlay(iw, ih, ch);
+}
+
+function applyFilterToCanvas(ctx, w, h){
+  if(editorFilter==='original') return;
+  const id = ctx.getImageData(0,0,w,h);
+  const d = id.data;
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i],g=d[i+1],b=d[i+2];
+    if(editorFilter==='bw'){
+      const gray=0.299*r+0.587*g+0.114*b;
+      d[i]=d[i+1]=d[i+2]=gray;
+    } else if(editorFilter==='doc'){
+      // High contrast B&W
+      const gray=0.299*r+0.587*g+0.114*b;
+      const v = gray > 128 ? Math.min(255,gray*1.3) : Math.max(0,gray*0.6);
+      d[i]=d[i+1]=d[i+2]=v;
+    } else if(editorFilter==='bright'){
+      d[i]=Math.min(255,r*1.2+20);
+      d[i+1]=Math.min(255,g*1.2+20);
+      d[i+2]=Math.min(255,b*1.2+20);
+    }
+  }
+  ctx.putImageData(id,0,0);
+}
+
+function updateCropOverlay(cw, ch, displayH){
+  const svg = document.getElementById('crop-overlay');
+  const pts = cropPoints.map(p=>({
+    px: p.x/100 * 100 + '%',
+    py: p.y/100 * 100 + '%',
+    x: p.x/100 * cw,
+    y: p.y/100 * ch
+  }));
+  // Draw polygon on SVG
+  const poly = pts.map(p=>`${p.x},${p.y}`).join(' ');
+  svg.innerHTML = `
+    <polygon points="${poly}" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="${pts[0].x}" y1="${pts[0].y}" x2="${pts[1].x}" y2="${pts[1].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <line x1="${pts[1].x}" y1="${pts[1].y}" x2="${pts[2].x}" y2="${pts[2].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <line x1="${pts[2].x}" y1="${pts[2].y}" x2="${pts[3].x}" y2="${pts[3].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <line x1="${pts[3].x}" y1="${pts[3].y}" x2="${pts[0].x}" y2="${pts[0].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+  `;
+  // Position corner handles
+  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
+  const wrap = document.getElementById('editor-wrap');
+  const ww = wrap.clientWidth;
+  cropPoints.forEach((p,i)=>{
+    const el = document.getElementById(ids[i]);
+    el.style.left = (p.x/100*ww)+'px';
+    el.style.top = (p.y/100*displayH)+'px';
+  });
+}
+
+function rotateImage(){
+  editorRotation = (editorRotation + 90) % 360;
+  renderEditor();
+}
+
+function applyFilter(f){
+  editorFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('f-'+f).classList.add('selected');
+  renderEditor();
+}
+
+// Drag crop points
+['cp-tl','cp-tr','cp-br','cp-bl'].forEach((id,i)=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  const onStart = (e)=>{
+    draggingCorner = i;
+    e.preventDefault();
+  };
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('touchstart', onStart, {passive:false});
+});
+
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('touchmove', onDragMove, {passive:false});
+document.addEventListener('mouseup', ()=>{ draggingCorner=-1; });
+document.addEventListener('touchend', ()=>{ draggingCorner=-1; });
+
+function onDragMove(e){
+  if(draggingCorner<0) return;
+  e.preventDefault();
+  const wrap = document.getElementById('editor-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const x = Math.max(0, Math.min(100, (clientX-rect.left)/rect.width*100));
+  const y = Math.max(0, Math.min(100, (clientY-rect.top)/rect.height*100));
+  cropPoints[draggingCorner] = {x,y};
+  const canvas = document.getElementById('canvas-display');
+  updateCropOverlay(canvas.width, canvas.height, rect.height);
+}
+
+function confirmEditor(){
+  // Apply crop and render final image
+  const src = document.getElementById('canvas-display');
+  const dst = document.getElementById('canvas-hidden');
+  const w = src.width, h = src.height;
+
+  // Bounding box of crop points
+  const xs = cropPoints.map(p=>p.x/100*w);
+  const ys = cropPoints.map(p=>p.y/100*h);
+  const x0=Math.min(...xs), y0=Math.min(...ys);
+  const x1=Math.max(...xs), y1=Math.max(...ys);
+  const cw=Math.max(10,x1-x0), ch=Math.max(10,y1-y0);
+
+  dst.width = cw;
+  dst.height = ch;
+  const ctx = dst.getContext('2d');
+  ctx.drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
+
+  dst.toBlob((blob)=>{
+    const file = new File([blob], 'scan.jpg', {type:'image/jpeg'});
+    if(editorCallback) editorCallback(file);
+    showScreen('s-renew');
+  }, 'image/jpeg', 0.92);
+}
+
+function cancelEditor(){
+  showScreen('s-renew');
 }
 
 // ══ TOAST ══
