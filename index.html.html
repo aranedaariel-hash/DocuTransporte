@@ -8,6 +8,8 @@
 <title>DocuTransporte · Pregate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window['pdfjs-dist/build/pdf']) window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <style>
 :root{--bg:#0f1923;--bg2:#162030;--bg3:#1d2d40;--bg4:#243550;--surface:#1a2a3a;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8eef4;--text2:#8a9bb0;--text3:#4a5d72;--accent:#3b82f6;--accent2:#1d6ef5;--ok:#22c55e;--ok-bg:rgba(34,197,94,0.12);--bad:#ef4444;--bad-bg:rgba(239,68,68,0.12);--radius:12px;--radius-sm:8px;--font:'Sora',sans-serif;--mono:'IBM Plex Mono',monospace;}
 .light{--bg:#f0f4f8;--bg2:#e4ecf4;--bg3:#d8e4f0;--bg4:#c8d8ea;--surface:#ffffff;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text:#0f1923;--text2:#4a6080;--text3:#8aa0b8;--accent:#1d6ef5;--accent2:#1558d0;--ok:#16a34a;--ok-bg:rgba(22,163,74,0.10);--bad:#dc2626;--bad-bg:rgba(220,38,38,0.10);}
@@ -256,6 +258,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="icon-btn" onclick="syncFromDrive()" title="Actualizar desde Drive">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     </button>
+    <button class="icon-btn" onclick="deleteEntity()" title="Eliminar" style="color:var(--bad);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </button>
   </div>
   <div id="detail-content" style="overflow-y:auto;flex:1;"></div>
 </div>
@@ -444,14 +449,38 @@ applyTheme();
 // ══ AUTH ══
 function handleAuth(){
   if(accessToken){ signOut(); return; }
+  requestToken(false);
+}
+
+function requestToken(silent){
+  const base = window.location.href.split('?')[0].split('#')[0];
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
-    redirect_uri: window.location.href.split('?')[0].split('#')[0],
+    redirect_uri: base,
     response_type: 'token',
     scope: SCOPES,
-    prompt: 'select_account'
+    prompt: silent ? 'none' : 'select_account'
   });
-  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+  if(silent){
+    // Silent refresh via hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    iframe.onload = ()=>{
+      try {
+        const hash = iframe.contentWindow.location.hash;
+        const p = new URLSearchParams(hash.substring(1));
+        const token = p.get('access_token');
+        if(token){ accessToken = token; document.body.removeChild(iframe); initDrive(); }
+        else { document.body.removeChild(iframe); }
+      } catch(e){ document.body.removeChild(iframe); }
+    };
+    document.body.appendChild(iframe);
+  } else {
+    // Save current state before redirect
+    localStorage.setItem('dct-db', JSON.stringify(db));
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+  }
 }
 
 function signOut(){
@@ -459,7 +488,7 @@ function signOut(){
   rootFolderId = null;
   subFolderIds = {};
   stateFileId = null;
-  db = {chofer:[],tractor:[],semi:[],transporte:[]};
+  localStorage.removeItem('dct-auth');
   updateAuthUI(false);
   updateCounts();
   showToast('Sesión cerrada');
@@ -473,6 +502,7 @@ function updateAuthUI(connected, email=''){
     dot.classList.add('connected');
     txt.textContent = email ? `Conectado · ${email}` : 'Conectado a Google Drive';
     btn.textContent = 'Desconectar';
+    if(email) localStorage.setItem('dct-auth', JSON.stringify({email}));
   } else {
     dot.classList.remove('connected');
     txt.textContent = 'No conectado a Google Drive';
@@ -482,15 +512,36 @@ function updateAuthUI(connected, email=''){
 
 async function checkTokenFromUrl(){
   const hash = window.location.hash;
-  if(!hash) return;
-  const params = new URLSearchParams(hash.substring(1));
-  const token = params.get('access_token');
-  if(!token) return;
-  window.history.replaceState(null,'',window.location.pathname);
-  accessToken = token;
-  updateAuthUI(true);
-  showToast('Conectando con Drive…');
-  await initDrive();
+  if(hash){
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if(token){
+      window.history.replaceState(null,'',window.location.pathname);
+      accessToken = token;
+      // Restore db from localStorage while Drive loads
+      const saved = localStorage.getItem('dct-db');
+      if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
+      updateAuthUI(true);
+      showToast('Conectando con Drive…');
+      await initDrive();
+      return;
+    }
+  }
+  // Restore db from localStorage
+  const saved = localStorage.getItem('dct-db');
+  if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
+  // Show last known auth state
+  const auth = localStorage.getItem('dct-auth');
+  if(auth){
+    try{
+      const {email} = JSON.parse(auth);
+      const dot = document.getElementById('auth-dot');
+      const txt = document.getElementById('auth-text');
+      const btn = document.getElementById('auth-btn');
+      txt.textContent = `Sesión anterior: ${email} · Reconectar`;
+      btn.textContent = 'Reconectar';
+    }catch(e){}
+  }
 }
 
 // ══ DRIVE ══
@@ -803,6 +854,17 @@ function formatVto(vto){
   return `${d}/${m}/${y}`;
 }
 
+function deleteEntity(){
+  const e = (db[currentSection]||[]).find(x=>x.id===currentEntityId);
+  if(!e) return;
+  if(!confirm(`¿Eliminar "${e.label}"? Esta acción no se puede deshacer.`)) return;
+  db[currentSection] = db[currentSection].filter(x=>x.id!==currentEntityId);
+  saveDB(); updateCounts();
+  showToast('✓ Eliminado correctamente');
+  showScreen('s-list');
+  renderEntityList(db[currentSection]||[]);
+}
+
 function getResumeUrl(sec, id){
   return `${window.location.origin}${window.location.pathname}?ver=${sec}&id=${id}`;
 }
@@ -938,21 +1000,40 @@ function updateFilename(){
   document.getElementById('ocr-filename').textContent=`${prefix}_${currentDoc.docId.toUpperCase()}_vto-${d}-${m}-${y}.pdf`;
 }
 
-async function generatePreviewJPG(imageFile, filename){
-  return new Promise((resolve)=>{
-    const img = new Image();
-    const url = URL.createObjectURL(imageFile);
-    img.onload = ()=>{
-      const canvas = document.createElement('canvas');
-      const MAX = 1200;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      canvas.width  = img.width  * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(resolve, 'image/jpeg', 0.82);
-    };
-    img.src = url;
+async function generatePreviewJPG(srcFile){
+  return new Promise(async (resolve)=>{
+    try {
+      if(srcFile.type === 'application/pdf'){
+        // Use PDF.js to render first page
+        const arrBuf = await srcFile.arrayBuffer();
+        const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
+        if(!pdfjsLib){ resolve(null); return; }
+        const pdf = await pdfjsLib.getDocument({data: arrBuf}).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({scale: 1.5});
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+      } else {
+        // Image file
+        const img = new Image();
+        const url = URL.createObjectURL(srcFile);
+        img.onload = ()=>{
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width  = img.width  * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(resolve, 'image/jpeg', 0.85);
+        };
+        img.onerror = ()=>{ URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+      }
+    } catch(e){ console.warn('Preview error', e); resolve(null); }
   });
 }
 
@@ -990,10 +1071,7 @@ async function confirmUpload(){
     let previewUrl = '';
     try {
       statusEl.textContent='Generando preview…';
-      const srcFile = capturedPages[0];
-      const previewBlob = srcFile.type.startsWith('image/')
-        ? await generatePreviewJPG(srcFile, filename)
-        : null;
+      const previewBlob = await generatePreviewJPG(capturedPages[0]);
       if(previewBlob){
         const previewName = filename.replace(/\.pdf$/i, '_preview.jpg');
         const previewFile = new File([previewBlob], previewName, {type:'image/jpeg'});
