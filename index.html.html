@@ -1028,11 +1028,11 @@ function renderEditor(){
   let iw = editorImg.naturalWidth, ih = editorImg.naturalHeight;
   if(editorRotation % 180 !== 0){ [iw,ih]=[ih,iw]; }
   const scale = ww / iw;
-  const ch = ih * scale;
+  const displayH = ih * scale;
   canvas.width = iw;
   canvas.height = ih;
-  canvas.style.height = ch + 'px';
-  wrap.style.height = ch + 'px';
+  canvas.style.height = displayH + 'px';
+  wrap.style.height = displayH + 'px';
   const ctx = canvas.getContext('2d');
   ctx.save();
   ctx.translate(iw/2, ih/2);
@@ -1042,7 +1042,8 @@ function renderEditor(){
   ctx.drawImage(editorImg, -dw/2, -dh/2);
   ctx.restore();
   applyFilterToCanvas(ctx, iw, ih);
-  updateCropOverlay(iw, ih, ch);
+  // Use requestAnimationFrame so layout is settled before positioning handles
+  requestAnimationFrame(()=>updateCropOverlay(iw, ih, displayH));
 }
 
 function applyFilterToCanvas(ctx, w, h){
@@ -1069,30 +1070,30 @@ function applyFilterToCanvas(ctx, w, h){
 }
 
 function updateCropOverlay(cw, ch, displayH){
-  const svg = document.getElementById('crop-overlay');
-  const pts = cropPoints.map(p=>({
-    px: p.x/100 * 100 + '%',
-    py: p.y/100 * 100 + '%',
-    x: p.x/100 * cw,
-    y: p.y/100 * ch
-  }));
-  // Draw polygon on SVG
-  const poly = pts.map(p=>`${p.x},${p.y}`).join(' ');
-  svg.innerHTML = `
-    <polygon points="${poly}" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="2"/>
-    <line x1="${pts[0].x}" y1="${pts[0].y}" x2="${pts[1].x}" y2="${pts[1].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
-    <line x1="${pts[1].x}" y1="${pts[1].y}" x2="${pts[2].x}" y2="${pts[2].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
-    <line x1="${pts[2].x}" y1="${pts[2].y}" x2="${pts[3].x}" y2="${pts[3].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
-    <line x1="${pts[3].x}" y1="${pts[3].y}" x2="${pts[0].x}" y2="${pts[0].y}" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
-  `;
-  // Position corner handles
-  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
   const wrap = document.getElementById('editor-wrap');
   const ww = wrap.clientWidth;
+  const dh = displayH || wrap.clientHeight;
+  const svg = document.getElementById('crop-overlay');
+
+  // All in display pixels
+  const pts = cropPoints.map(p=>({
+    x: p.x/100 * ww,
+    y: p.y/100 * dh
+  }));
+
+  const poly = pts.map(p=>`${p.x},${p.y}`).join(' ');
+  svg.setAttribute('viewBox', `0 0 ${ww} ${dh}`);
+  svg.innerHTML = `
+    <polygon points="${poly}" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="2"/>
+  `;
+
+  // Position corner handles
+  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
   cropPoints.forEach((p,i)=>{
     const el = document.getElementById(ids[i]);
-    el.style.left = (p.x/100*ww)+'px';
-    el.style.top = (p.y/100*displayH)+'px';
+    if(!el) return;
+    el.style.left = (p.x/100*ww) + 'px';
+    el.style.top  = (p.y/100*dh) + 'px';
   });
 }
 
@@ -1132,11 +1133,10 @@ function onDragMove(e){
   const rect = wrap.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const x = Math.max(0, Math.min(100, (clientX-rect.left)/rect.width*100));
-  const y = Math.max(0, Math.min(100, (clientY-rect.top)/rect.height*100));
-  cropPoints[draggingCorner] = {x,y};
-  const canvas = document.getElementById('canvas-display');
-  updateCropOverlay(canvas.width, canvas.height, rect.height);
+  const x = Math.max(2, Math.min(98, (clientX - rect.left) / rect.width * 100));
+  const y = Math.max(2, Math.min(98, (clientY - rect.top) / rect.height * 100));
+  cropPoints[draggingCorner] = {x, y};
+  updateCropOverlay(0, 0, rect.height);
 }
 
 function confirmEditor(){
