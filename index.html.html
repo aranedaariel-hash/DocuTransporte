@@ -1146,30 +1146,25 @@ async function confirmUpload(){
     const driveUrl = uploadedFile.webViewLink||'#';
     const fileId   = uploadedFile.id||'';
 
-    // Generate and upload preview JPG
+    // Generate and upload preview JPG - store as base64 in state
     let previewUrl = '';
     try {
       statusEl.textContent='Generando preview…';
       const previewBlob = await generatePreviewJPG(capturedPages[0]);
       if(previewBlob){
-        const previewName = filename.replace(/\.pdf$/i, '_preview.jpg');
-        const previewFile = new File([previewBlob], previewName, {type:'image/jpeg'});
-        const uploaded = await uploadFileToDrive(previewFile, previewName, folderId);
-        if(uploaded.id){
-          // Make preview publicly readable - retry up to 3 times
-          for(let attempt=0; attempt<3; attempt++){
-            try {
-              const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${uploaded.id}/permissions`, {
-                method:'POST',
-                headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
-                body: JSON.stringify({role:'reader', type:'anyone'})
-              });
-              if(permRes.ok) break;
-            } catch(pe){ await new Promise(r=>setTimeout(r,500)); }
-          }
-          // Use uc?export=view which works cross-device without auth
-          previewUrl = `https://drive.google.com/uc?export=view&id=${uploaded.id}`;
-        }
+        // Convert to base64 and store directly in estado.json
+        const base64 = await new Promise(res=>{
+          const reader = new FileReader();
+          reader.onload = e => res(e.target.result);
+          reader.readAsDataURL(previewBlob);
+        });
+        previewUrl = base64; // data:image/jpeg;base64,...
+        // Also upload to Drive as backup
+        try {
+          const previewName = filename.replace(/\.[^.]+$/, '_preview.jpg');
+          const previewFile = new File([previewBlob], previewName, {type:'image/jpeg'});
+          await uploadFileToDrive(previewFile, previewName, folderId);
+        } catch(e){}
       }
     } catch(e){ console.warn('Preview generation failed', e); }
 
