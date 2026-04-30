@@ -1140,24 +1140,28 @@ function onDragMove(e){
 }
 
 function confirmEditor(){
-  // Apply crop and render final image
   const src = document.getElementById('canvas-display');
   const dst = document.getElementById('canvas-hidden');
-  const w = src.width, h = src.height;
+  const cw = src.width;   // canvas resolution
+  const ch = src.height;
 
-  // Bounding box of crop points
-  const xs = cropPoints.map(p=>p.x/100*w);
-  const ys = cropPoints.map(p=>p.y/100*h);
-  const x0=Math.min(...xs), y0=Math.min(...ys);
-  const x1=Math.max(...xs), y1=Math.max(...ys);
-  const cw=Math.max(10,x1-x0), ch=Math.max(10,y1-y0);
+  // cropPoints are in % of display → map to canvas resolution
+  const xs = cropPoints.map(p => p.x/100 * cw);
+  const ys = cropPoints.map(p => p.y/100 * ch);
+  const x0 = Math.round(Math.min(...xs));
+  const y0 = Math.round(Math.min(...ys));
+  const x1 = Math.round(Math.max(...xs));
+  const y1 = Math.round(Math.max(...ys));
+  const rw = Math.max(10, x1 - x0);
+  const rh = Math.max(10, y1 - y0);
 
-  dst.width = cw;
-  dst.height = ch;
+  dst.width  = rw;
+  dst.height = rh;
   const ctx = dst.getContext('2d');
-  ctx.drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
+  ctx.drawImage(src, x0, y0, rw, rh, 0, 0, rw, rh);
 
-  dst.toBlob((blob)=>{
+  dst.toBlob((blob) => {
+    if(!blob){ showToast('⚠️ Error al procesar la imagen'); return; }
     const file = new File([blob], 'scan.jpg', {type:'image/jpeg'});
     if(editorCallback) editorCallback(file);
     showScreen('s-renew');
