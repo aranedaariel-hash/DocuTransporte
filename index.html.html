@@ -307,51 +307,45 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="topbar-back" onclick="cancelEditor()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
     <div class="topbar-info">
       <div class="topbar-title">Editar documento</div>
-      <div class="topbar-sub">Recortá y aplicá filtro</div>
     </div>
-    <button class="icon-btn" onclick="rotateImage()" title="Rotar">
+    <button class="icon-btn" onclick="rotateImage()" title="Rotar" style="margin-right:4px;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     </button>
-  </div>
-  <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
-    <!-- Canvas de edición -->
-    <div style="position:relative;background:#000;flex-shrink:0;" id="editor-wrap">
-      <canvas id="canvas-display" style="width:100%;display:block;touch-action:none;"></canvas>
-      <!-- Puntos de recorte -->
-      <div class="crop-point" id="cp-tl" data-corner="0"></div>
-      <div class="crop-point" id="cp-tr" data-corner="1"></div>
-      <div class="crop-point" id="cp-br" data-corner="2"></div>
-      <div class="crop-point" id="cp-bl" data-corner="3"></div>
-      <svg id="crop-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
-    </div>
-
-    <!-- Filtros -->
-    <div style="padding:12px 16px 8px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);">Filtro</div>
-    <div style="display:flex;gap:8px;padding:0 16px 14px;overflow-x:auto;">
-      <button class="filter-btn selected" id="f-original" onclick="applyFilter('original')">
-        <div class="filter-preview" style="background:linear-gradient(135deg,#888,#ddd);"></div>
-        <span>Original</span>
-      </button>
-      <button class="filter-btn" id="f-doc" onclick="applyFilter('doc')">
-        <div class="filter-preview" style="background:linear-gradient(135deg,#000,#fff);"></div>
-        <span>Documento</span>
-      </button>
-      <button class="filter-btn" id="f-bw" onclick="applyFilter('bw')">
-        <div class="filter-preview" style="background:linear-gradient(135deg,#333,#ccc);"></div>
-        <span>B&N</span>
-      </button>
-      <button class="filter-btn" id="f-bright" onclick="applyFilter('bright')">
-        <div class="filter-preview" style="background:linear-gradient(135deg,#aaa,#fff);"></div>
-        <span>Claro</span>
-      </button>
-    </div>
-
-    <canvas id="canvas-hidden" style="display:none;"></canvas>
-    <button class="btn-primary" onclick="confirmEditor()" style="margin-bottom:20px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      Usar esta imagen
+    <button onclick="confirmEditor()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;">
+      Usar ✓
     </button>
   </div>
+
+  <!-- Canvas de edición ocupa toda la pantalla disponible -->
+  <div style="position:relative;background:#000;flex:1;overflow:hidden;" id="editor-wrap">
+    <canvas id="canvas-display" style="width:100%;height:100%;object-fit:contain;display:block;touch-action:none;"></canvas>
+    <div class="crop-point" id="cp-tl"></div>
+    <div class="crop-point" id="cp-tr"></div>
+    <div class="crop-point" id="cp-br"></div>
+    <div class="crop-point" id="cp-bl"></div>
+    <svg id="crop-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
+  </div>
+
+  <!-- Filtros fijos abajo -->
+  <div style="background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;">
+    <button class="filter-btn selected" id="f-original" onclick="applyFilter('original')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#888,#ddd);"></div>
+      <span>Original</span>
+    </button>
+    <button class="filter-btn" id="f-doc" onclick="applyFilter('doc')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#000,#fff);"></div>
+      <span>Documento</span>
+    </button>
+    <button class="filter-btn" id="f-bw" onclick="applyFilter('bw')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#333,#ccc);"></div>
+      <span>B&N</span>
+    </button>
+    <button class="filter-btn" id="f-bright" onclick="applyFilter('bright')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#aaa,#fff);"></div>
+      <span>Claro</span>
+    </button>
+  </div>
+  <canvas id="canvas-hidden" style="display:none;"></canvas>
 </div>
 
 <!-- ══ NUEVO ══ -->
@@ -1008,12 +1002,12 @@ function openEditor(file, callback){
     const img = new Image();
     img.onload = ()=>{
       editorImg = img;
-      // Init crop points at 10% inset
-      cropPoints = [{x:10,y:10},{x:90,y:10},{x:90,y:90},{x:10,y:90}];
-      renderEditor();
-      showScreen('s-editor');
+      cropPoints = [{x:5,y:5},{x:95,y:5},{x:95,y:95},{x:5,y:95}];
       document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('selected'));
       document.getElementById('f-original').classList.add('selected');
+      showScreen('s-editor');
+      // Wait for screen to render before drawing
+      requestAnimationFrame(()=>{ requestAnimationFrame(renderEditor); });
     };
     img.src = e.target.result;
   };
@@ -1024,26 +1018,55 @@ function renderEditor(){
   if(!editorImg) return;
   const wrap = document.getElementById('editor-wrap');
   const canvas = document.getElementById('canvas-display');
-  const ww = wrap.clientWidth || window.innerWidth;
-  let iw = editorImg.naturalWidth, ih = editorImg.naturalHeight;
-  if(editorRotation % 180 !== 0){ [iw,ih]=[ih,iw]; }
-  const scale = ww / iw;
-  const displayH = ih * scale;
-  canvas.width = iw;
-  canvas.height = ih;
+  const ww = wrap.clientWidth  || window.innerWidth;
+  const wh = wrap.clientHeight || window.innerHeight - 120;
+
+  let iw = editorImg.naturalWidth;
+  let ih = editorImg.naturalHeight;
+
+  // Apply rotation
+  const rot = editorRotation;
+  const swapped = rot % 180 !== 0;
+  const canvasW = swapped ? ih : iw;
+  const canvasH = swapped ? iw : ih;
+
+  // Scale to fit wrap
+  const scale = Math.min(ww / canvasW, wh / canvasH);
+  const displayW = canvasW * scale;
+  const displayH = canvasH * scale;
+
+  canvas.width  = canvasW;
+  canvas.height = canvasH;
+  canvas.style.width  = displayW + 'px';
   canvas.style.height = displayH + 'px';
-  wrap.style.height = displayH + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left = ((ww - displayW) / 2) + 'px';
+  canvas.style.top  = ((wh - displayH) / 2) + 'px';
+
+  // Also size the overlay and handles container
+  const overlay = document.getElementById('crop-overlay');
+  overlay.style.left   = canvas.style.left;
+  overlay.style.top    = canvas.style.top;
+  overlay.style.width  = displayW + 'px';
+  overlay.style.height = displayH + 'px';
+  ['cp-tl','cp-tr','cp-br','cp-bl'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.style.setProperty('--dw', displayW+'px'); el.style.setProperty('--dh', displayH+'px'); }
+  });
+  // Store display rect for drag calculation
+  wrap._displayW = displayW;
+  wrap._displayH = displayH;
+  wrap._offsetX  = (ww - displayW) / 2;
+  wrap._offsetY  = (wh - displayH) / 2;
+
   const ctx = canvas.getContext('2d');
   ctx.save();
-  ctx.translate(iw/2, ih/2);
-  ctx.rotate(editorRotation * Math.PI/180);
-  const dw = editorRotation%180!==0 ? editorImg.naturalHeight : editorImg.naturalWidth;
-  const dh = editorRotation%180!==0 ? editorImg.naturalWidth : editorImg.naturalHeight;
-  ctx.drawImage(editorImg, -dw/2, -dh/2);
+  ctx.translate(canvasW/2, canvasH/2);
+  ctx.rotate(rot * Math.PI/180);
+  ctx.drawImage(editorImg, -iw/2, -ih/2);
   ctx.restore();
-  applyFilterToCanvas(ctx, iw, ih);
-  // Use requestAnimationFrame so layout is settled before positioning handles
-  requestAnimationFrame(()=>updateCropOverlay(iw, ih, displayH));
+  applyFilterToCanvas(ctx, canvasW, canvasH);
+  requestAnimationFrame(()=>updateCropOverlay());
 }
 
 function applyFilterToCanvas(ctx, w, h){
@@ -1069,31 +1092,28 @@ function applyFilterToCanvas(ctx, w, h){
   ctx.putImageData(id,0,0);
 }
 
-function updateCropOverlay(cw, ch, displayH){
+function updateCropOverlay(){
   const wrap = document.getElementById('editor-wrap');
-  const ww = wrap.clientWidth;
-  const dh = displayH || wrap.clientHeight;
+  const dw = wrap._displayW || wrap.clientWidth;
+  const dh = wrap._displayH || wrap.clientHeight;
   const svg = document.getElementById('crop-overlay');
+  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
 
-  // All in display pixels
   const pts = cropPoints.map(p=>({
-    x: p.x/100 * ww,
+    x: p.x/100 * dw,
     y: p.y/100 * dh
   }));
 
-  const poly = pts.map(p=>`${p.x},${p.y}`).join(' ');
-  svg.setAttribute('viewBox', `0 0 ${ww} ${dh}`);
-  svg.innerHTML = `
-    <polygon points="${poly}" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="2"/>
-  `;
+  svg.setAttribute('viewBox',`0 0 ${dw} ${dh}`);
+  svg.innerHTML = `<polygon points="${pts.map(p=>`${p.x},${p.y}`).join(' ')}" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="2.5"/>`;
 
-  // Position corner handles
-  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
   cropPoints.forEach((p,i)=>{
     const el = document.getElementById(ids[i]);
     if(!el) return;
-    el.style.left = (p.x/100*ww) + 'px';
-    el.style.top  = (p.y/100*dh) + 'px';
+    const ox = wrap._offsetX || 0;
+    const oy = wrap._offsetY || 0;
+    el.style.left = (ox + p.x/100*dw) + 'px';
+    el.style.top  = (oy + p.y/100*dh) + 'px';
   });
 }
 
@@ -1130,13 +1150,19 @@ function onDragMove(e){
   if(draggingCorner<0) return;
   e.preventDefault();
   const wrap = document.getElementById('editor-wrap');
-  const rect = wrap.getBoundingClientRect();
+  const wRect = wrap.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const x = Math.max(2, Math.min(98, (clientX - rect.left) / rect.width * 100));
-  const y = Math.max(2, Math.min(98, (clientY - rect.top) / rect.height * 100));
+  const ox = wrap._offsetX || 0;
+  const oy = wrap._offsetY || 0;
+  const dw = wrap._displayW || wrap.clientWidth;
+  const dh = wrap._displayH || wrap.clientHeight;
+  const relX = clientX - wRect.left - ox;
+  const relY = clientY - wRect.top  - oy;
+  const x = Math.max(2, Math.min(98, relX / dw * 100));
+  const y = Math.max(2, Math.min(98, relY / dh * 100));
   cropPoints[draggingCorner] = {x, y};
-  updateCropOverlay(0, 0, rect.height);
+  updateCropOverlay();
 }
 
 function confirmEditor(){
