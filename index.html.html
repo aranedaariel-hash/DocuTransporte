@@ -894,7 +894,22 @@ async function deleteEntity(){
   const e = (db[currentSection]||[]).find(x=>x.id===currentEntityId);
   if(!e) return;
   showConfirm(`¿Eliminar <strong>${e.label}</strong> y toda su documentación?`, async ()=>{
-    if(accessToken && subFolderIds[currentSection]){
+    showToast('Eliminando…');
+    // 1. Remove from db first
+    db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
+    localStorage.setItem('dct-db', JSON.stringify(db));
+    currentEntityId = null;
+    updateCounts();
+
+    // 2. Save updated estado.json to Drive (critical step)
+    if(accessToken && stateFileId){
+      try {
+        await saveStateToDrive();
+      } catch(err){ console.warn('Error saving state after delete', err); }
+    }
+
+    // 3. Delete folder from Drive (best effort)
+    if(accessToken && subFolderIds[currentSection] && e){
       try {
         const safeName = e.label.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
         const res = await driveRequest(
@@ -904,11 +919,9 @@ async function deleteEntity(){
         if(data.files && data.files.length > 0){
           await driveRequest(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}`, {method:'DELETE'});
         }
-      } catch(err){ console.warn('Drive delete failed', err); }
+      } catch(err){ console.warn('Drive folder delete failed', err); }
     }
-    db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
-    currentEntityId = null;
-    saveDB(); updateCounts();
+
     showToast('✓ Eliminado correctamente');
     showScreen('s-list');
     renderEntityList(db[currentSection]||[]);
