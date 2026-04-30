@@ -579,6 +579,7 @@ async function loadStateFromDrive(){
     const data = await res.json();
     if(data.files && data.files.length > 0){
       stateFileId = data.files[0].id;
+      localStorage.setItem('dct-meta', JSON.stringify({stateFileId}));
       const contentRes = await driveRequest(
         `https://www.googleapis.com/drive/v3/files/${stateFileId}?alt=media`
       );
@@ -615,7 +616,18 @@ async function saveStateToDrive(){
     });
     const data = await res.json();
     stateFileId = data.id;
+    // Make estado.json publicly readable so resume view can fetch it
+    try {
+      await driveRequest(`https://www.googleapis.com/drive/v3/files/${stateFileId}/permissions`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({role:'reader', type:'anyone'})
+      });
+    } catch(e){ console.warn('Could not make state public', e); }
   }
+  // Always save stateFileId to localStorage for resume view
+  localStorage.setItem('dct-meta', JSON.stringify({stateFileId}));
+  localStorage.setItem('dct-db', JSON.stringify(db));
 }
 
 async function getOrCreateEntityFolder(entityLabel, section){
@@ -1364,11 +1376,32 @@ updateCounts();
   const ver = params.get('ver');
   const id  = params.get('id');
   if(ver && id){
-    // Load state from localStorage and show resume
-    const saved = localStorage.getItem('dct-db');
-    if(saved){ try{ Object.assign(db, JSON.parse(saved)); }catch(e){} }
     showScreen('s-ver');
-    renderVerScreen(ver, id);
+    document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">Cargando documentación…</div>`;
+    // Try localStorage first, then fetch estado.json from Drive via state file
+    const saved = localStorage.getItem('dct-db');
+    if(saved){
+      try{ Object.assign(db, JSON.parse(saved)); }catch(e){}
+      if((db[ver]||[]).find(x=>x.id===id)){
+        renderVerScreen(ver, id);
+        return;
+      }
+    }
+    // Fetch estado.json publicly - need stateFileId stored in localStorage
+    const meta = localStorage.getItem('dct-meta');
+    const stateId = meta ? JSON.parse(meta).stateFileId : null;
+    if(stateId){
+      fetch(`https://drive.google.com/uc?export=download&id=${stateId}`)
+        .then(r=>r.json())
+        .then(data=>{ Object.assign(db,data); renderVerScreen(ver,id); })
+        .catch(()=>{ renderVerScreen(ver,id); });
+    } else {
+      // No stateFileId available - show message to open from the same device
+      document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+        <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+        <p style="font-size:15px;line-height:1.6;">Para ver esta página<br>abrí la URL desde el mismo<br>dispositivo donde usás la app.</p>
+      </div>`;
+    }
   } else {
     checkTokenFromUrl();
   }
