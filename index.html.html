@@ -16,8 +16,9 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;transition:background .3s,color .3s;}
 #app{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;display:none;flex-direction:column;}
+.screen{flex:1;overflow:hidden;display:none;flex-direction:column;}
 .screen.active{display:flex;}
+#s-ver.active{display:block;overflow-y:auto;}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:10;}
 .topbar-back{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
 .topbar-info{flex:1;min-width:0;}
@@ -378,8 +379,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 </div>
 
 <!-- ══ VISTA RESUMEN ══ -->
-<div class="screen" id="s-ver" style="overflow-y:auto;display:block;">
-  <div id="ver-content">
+<div class="screen" id="s-ver">
+  <div id="ver-content" style="overflow-y:auto;height:100%;">
     <div style="padding:40px 20px;text-align:center;color:var(--text3);">Cargando…</div>
   </div>
 </div>
@@ -644,7 +645,13 @@ async function loadStateFromDrive(){
         `https://www.googleapis.com/drive/v3/files/${stateFileId}?alt=media`
       );
       const state = await contentRes.json();
-      db = {...{chofer:[],tractor:[],semi:[],transporte:[]}, ...state};
+      // Merge Drive state (source of truth) but deduplicate by id
+      const merged = {...{chofer:[],tractor:[],semi:[],transporte:[]}, ...state};
+      ['chofer','tractor','semi','transporte'].forEach(sec=>{
+        const seen = new Set();
+        merged[sec] = (merged[sec]||[]).filter(e=>{ if(seen.has(e.id)) return false; seen.add(e.id); return true; });
+      });
+      db = merged;
     } else {
       stateFileId = null;
       await saveStateToDrive();
@@ -863,29 +870,49 @@ function formatVto(vto){
   return `${d}/${m}/${y}`;
 }
 
+// ══ CUSTOM CONFIRM ══
+function showConfirm(msg, onOk){
+  let modal = document.getElementById('confirm-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'confirm-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;max-width:320px;width:100%;">
+    <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:20px;">${msg}</p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="document.getElementById('confirm-modal').style.display='none'" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--font);">Cancelar</button>
+      <button id="confirm-ok" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--bad);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">Eliminar</button>
+    </div>
+  </div>`;
+  modal.style.display='flex';
+  document.getElementById('confirm-ok').onclick=()=>{ modal.style.display='none'; onOk(); };
+}
+
 async function deleteEntity(){
   const e = (db[currentSection]||[]).find(x=>x.id===currentEntityId);
   if(!e) return;
-  if(!confirm(`¿Eliminar "${e.label}" y toda su documentación? Esta acción no se puede deshacer.`)) return;
-  // Delete entity folder from Drive
-  if(accessToken && subFolderIds[currentSection]){
-    try {
-      const safeName = e.label.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
-      const res = await driveRequest(
-        `https://www.googleapis.com/drive/v3/files?q=name='${safeName}' and '${subFolderIds[currentSection]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
-      );
-      const data = await res.json();
-      if(data.files && data.files.length > 0){
-        await driveRequest(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}`, {method:'DELETE'});
-      }
-    } catch(err){ console.warn('Drive delete failed', err); }
-  }
-  db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
-  currentEntityId = null;
-  saveDB(); updateCounts();
-  showToast('✓ Eliminado correctamente');
-  showScreen('s-list');
-  renderEntityList(db[currentSection]||[]);
+  showConfirm(`¿Eliminar <strong>${e.label}</strong> y toda su documentación?`, async ()=>{
+    if(accessToken && subFolderIds[currentSection]){
+      try {
+        const safeName = e.label.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
+        const res = await driveRequest(
+          `https://www.googleapis.com/drive/v3/files?q=name='${safeName}' and '${subFolderIds[currentSection]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
+        );
+        const data = await res.json();
+        if(data.files && data.files.length > 0){
+          await driveRequest(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}`, {method:'DELETE'});
+        }
+      } catch(err){ console.warn('Drive delete failed', err); }
+    }
+    db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
+    currentEntityId = null;
+    saveDB(); updateCounts();
+    showToast('✓ Eliminado correctamente');
+    showScreen('s-list');
+    renderEntityList(db[currentSection]||[]);
+  });
 }
 
 function getResumeUrl(sec, id){
