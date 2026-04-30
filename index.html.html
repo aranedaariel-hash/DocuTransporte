@@ -378,8 +378,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 </div>
 
 <!-- ══ VISTA RESUMEN ══ -->
-<div class="screen" id="s-ver">
-  <div style="overflow-y:auto;flex:1;background:var(--bg);" id="ver-content">
+<div class="screen" id="s-ver" style="overflow-y:auto;display:block;">
+  <div id="ver-content">
     <div style="padding:40px 20px;text-align:center;color:var(--text3);">Cargando…</div>
   </div>
 </div>
@@ -518,7 +518,6 @@ async function checkTokenFromUrl(){
     if(token){
       window.history.replaceState(null,'',window.location.pathname);
       accessToken = token;
-      // Restore db from localStorage while Drive loads
       const saved = localStorage.getItem('dct-db');
       if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
       updateAuthUI(true);
@@ -530,16 +529,26 @@ async function checkTokenFromUrl(){
   // Restore db from localStorage
   const saved = localStorage.getItem('dct-db');
   if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
-  // Show last known auth state
+  // Auto-reconnect silently if previously logged in
   const auth = localStorage.getItem('dct-auth');
   if(auth){
     try{
       const {email} = JSON.parse(auth);
+      updateAuthUI(false);
       const dot = document.getElementById('auth-dot');
       const txt = document.getElementById('auth-text');
-      const btn = document.getElementById('auth-btn');
-      txt.textContent = `Sesión anterior: ${email} · Reconectar`;
-      btn.textContent = 'Reconectar';
+      if(txt) txt.textContent = `Reconectando con Drive…`;
+      // Silent reconnect via prompt=none redirect
+      const base = window.location.href.split('?')[0].split('#')[0];
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        redirect_uri: base,
+        response_type: 'token',
+        scope: SCOPES,
+        prompt: 'none',
+        login_hint: email
+      });
+      window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
     }catch(e){}
   }
 }
@@ -854,11 +863,25 @@ function formatVto(vto){
   return `${d}/${m}/${y}`;
 }
 
-function deleteEntity(){
+async function deleteEntity(){
   const e = (db[currentSection]||[]).find(x=>x.id===currentEntityId);
   if(!e) return;
-  if(!confirm(`¿Eliminar "${e.label}"? Esta acción no se puede deshacer.`)) return;
-  db[currentSection] = db[currentSection].filter(x=>x.id!==currentEntityId);
+  if(!confirm(`¿Eliminar "${e.label}" y toda su documentación? Esta acción no se puede deshacer.`)) return;
+  // Delete entity folder from Drive
+  if(accessToken && subFolderIds[currentSection]){
+    try {
+      const safeName = e.label.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
+      const res = await driveRequest(
+        `https://www.googleapis.com/drive/v3/files?q=name='${safeName}' and '${subFolderIds[currentSection]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
+      );
+      const data = await res.json();
+      if(data.files && data.files.length > 0){
+        await driveRequest(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}`, {method:'DELETE'});
+      }
+    } catch(err){ console.warn('Drive delete failed', err); }
+  }
+  db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
+  currentEntityId = null;
   saveDB(); updateCounts();
   showToast('✓ Eliminado correctamente');
   showScreen('s-list');
@@ -883,14 +906,17 @@ function renderDetail(){
   const loaded_opt=opt.filter(d=>e.docs[d.id]);
   const pending_opt=opt.filter(d=>!e.docs[d.id]);
 
-  // URL de resumen
   const resumeUrl = getResumeUrl(currentSection, currentEntityId);
-  let html=`<div style="margin:12px 16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);display:flex;align-items:center;gap:10px;">
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">URL Resumen para ALET</div>
-      <div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);">${resumeUrl}</div>
+  let html=`<div style="margin:12px 16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);">
+    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">URL Resumen para ALET</div>
+    <div style="font-size:11px;color:var(--text2);font-family:var(--mono);word-break:break-all;margin-bottom:10px;">${resumeUrl}</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="copyResumeUrl()" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Copiar URL</button>
+      <a href="${resumeUrl}" target="_blank" style="flex:1;padding:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ir al enlace
+      </a>
     </div>
-    <button onclick="copyResumeUrl()" style="padding:7px 12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font);">Copiar</button>
   </div>`;
 
   html+='<div class="doc-section-title">Obligatorios</div>';
