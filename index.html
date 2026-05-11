@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1923">
+<title>DocuTransporte · Pregate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window['pdfjs-dist/build/pdf']) window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<style>
+:root{--bg:#0f1923;--bg2:#162030;--bg3:#1d2d40;--bg4:#243550;--surface:#1a2a3a;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--text:#e8eef4;--text2:#8a9bb0;--text3:#4a5d72;--accent:#3b82f6;--accent2:#1d6ef5;--ok:#22c55e;--ok-bg:rgba(34,197,94,0.12);--bad:#ef4444;--bad-bg:rgba(239,68,68,0.12);--radius:12px;--radius-sm:8px;--font:'Sora',sans-serif;--mono:'IBM Plex Mono',monospace;}
+.light{--bg:#f0f4f8;--bg2:#e4ecf4;--bg3:#d8e4f0;--bg4:#c8d8ea;--surface:#ffffff;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text:#0f1923;--text2:#4a6080;--text3:#8aa0b8;--accent:#1d6ef5;--accent2:#1558d0;--ok:#16a34a;--ok-bg:rgba(22,163,74,0.10);--bad:#dc2626;--bad-bg:rgba(220,38,38,0.10);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;transition:background .3s,color .3s;}
+#app{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;}
+.screen{flex:1;overflow:hidden;display:none;flex-direction:column;}
+.screen.active{display:flex;}
+#s-ver.active{display:block;overflow-y:auto;}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;position:sticky;top:0;z-index:10;}
+.topbar-back{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.topbar-info{flex:1;min-width:0;}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.icon-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:transparent;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.home-header{padding:28px 20px 24px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.home-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;}
+.logo-mark{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.app-name{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.5px;}
+.app-sub{font-size:12px;color:var(--text2);font-family:var(--mono);margin-top:2px;letter-spacing:1px;text-transform:uppercase;}
+.auth-bar{display:flex;align-items:center;gap:8px;margin-top:12px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border2);}
+.auth-dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex-shrink:0;}
+.auth-dot.connected{background:var(--ok);}
+.auth-text{font-size:11px;color:var(--text2);flex:1;}
+.auth-btn{font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;background:none;border:none;font-family:var(--font);padding:0;}
+.section-cards{padding:20px 16px;display:flex;flex-direction:column;gap:14px;}
+.sec-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all .15s;position:relative;overflow:hidden;}
+.sec-card:active{transform:scale(0.98);background:var(--bg3);}
+.sec-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.sec-card-chofer::before{background:#3b82f6;}
+.sec-card-tractor::before{background:#22c55e;}
+.sec-card-semi::before{background:#f59e0b;}
+.sec-card-transporte::before{background:#a78bfa;}
+.sec-icon{width:48px;height:48px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sec-icon-chofer{background:rgba(59,130,246,0.12);}
+.sec-icon-tractor{background:rgba(34,197,94,0.12);}
+.sec-icon-semi{background:rgba(245,158,11,0.10);}
+.sec-icon-transporte{background:rgba(167,139,250,0.12);}
+.sec-info{flex:1;}
+.sec-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.sec-sub{font-size:12px;color:var(--text2);}
+.sec-count{font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:20px;margin-top:6px;display:inline-block;}
+.sec-count-chofer{background:rgba(59,130,246,0.10);color:var(--accent);}
+.sec-count-tractor{background:rgba(34,197,94,0.10);color:var(--ok);}
+.sec-count-semi{background:rgba(245,158,11,0.10);color:#f59e0b;}
+.sec-count-transporte{background:rgba(167,139,250,0.12);color:#a78bfa;}
+.search-wrap{position:relative;}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);}
+.search-input{width:100%;padding:11px 14px 11px 38px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font);font-size:14px;color:var(--text);outline:none;transition:border-color .2s;}
+.search-input::placeholder{color:var(--text3);}
+.search-input:focus{border-color:var(--accent);}
+.list-header{padding:12px 16px 6px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-family:var(--mono);flex-shrink:0;}
+.entity-row{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s;}
+.entity-row:active{background:var(--bg3);}
+.avatar{width:42px;height:42px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-family:var(--mono);flex-shrink:0;}
+.av-blue{background:rgba(59,130,246,0.15);color:var(--accent);}
+.av-green{background:rgba(34,197,94,0.12);color:var(--ok);}
+.av-amber{background:rgba(245,158,11,0.10);color:#f59e0b;}
+.av-purple{background:rgba(167,139,250,0.12);color:#a78bfa;}
+.av-bad{background:var(--bad-bg);color:var(--bad);}
+.row-info{flex:1;min-width:0;}
+.row-name{font-size:14px;font-weight:500;color:var(--text);}
+.row-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;font-family:var(--mono);}
+.badge-ok{background:var(--ok-bg);color:var(--ok);}
+.badge-bad{background:var(--bad-bg);color:var(--bad);}
+.fab{position:fixed;bottom:24px;right:max(calc(50vw - 240px + 16px),16px);width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(59,130,246,0.4);z-index:20;}
+.fab:active{transform:scale(0.95);}
+.doc-section-title{padding:10px 16px 6px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-family:var(--mono);background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.doc-card{padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);}
+.doc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.doc-left{display:flex;align-items:center;gap:8px;}
+.doc-name{font-size:13px;font-weight:600;color:var(--text);}
+.doc-file{font-size:10px;color:var(--text3);margin-left:17px;font-family:var(--mono);margin-top:2px;}
+.doc-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.btn-sm{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s;}
+.btn-sm:active{background:var(--bg4);}
+.btn-sm-accent{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.08);color:var(--accent);}
+.btn-optional{display:flex;align-items:center;gap:8px;margin:12px 16px;padding:10px 14px;border-radius:var(--radius);border:1px dashed var(--border2);background:transparent;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);width:calc(100% - 32px);transition:all .15s;}
+.btn-optional:active{background:var(--bg3);}
+.cam-options{display:flex;gap:8px;padding:14px 16px 10px;}
+.btn-option{flex:1;padding:10px 8px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}
+.btn-option.selected{border-color:var(--accent);background:rgba(59,130,246,0.1);color:var(--accent);}
+.scan-area{margin:0 16px 12px;border-radius:var(--radius);border:1px dashed var(--border2);background:var(--bg2);overflow:hidden;}
+.cam-placeholder{height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+.cam-hint{font-size:12px;color:var(--text3);}
+.pages-label{padding:0 16px 4px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);}
+.pages-strip{padding:0 16px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.page-thumb{width:56px;height:70px;border-radius:var(--radius-sm);border:1px solid var(--border2);overflow:hidden;}
+.page-thumb img{width:100%;height:100%;object-fit:cover;}
+.page-add{width:56px;height:70px;border-radius:var(--radius-sm);border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;color:var(--text3);}
+.page-add:active{background:var(--bg3);}
+.ocr-box{margin:0 16px 14px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border2);padding:14px;}
+.ocr-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;}
+.ocr-row+.ocr-row{border-top:1px solid var(--border);}
+.ocr-label{font-size:11px;color:var(--text2);}
+.ocr-val{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono);text-align:right;max-width:200px;word-break:break-all;}
+.ocr-chip{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--ok-bg);color:var(--ok);font-weight:600;}
+.ocr-chip-wait{background:rgba(245,158,11,0.12);color:#f59e0b;}
+.ocr-input{background:transparent;border:none;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);outline:none;width:140px;text-align:right;padding:2px 4px;}
+.btn-primary{margin:0 16px 16px;width:calc(100% - 32px);padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;}
+.btn-primary:active{background:var(--accent2);transform:scale(0.98);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.form-section{padding:16px;border-bottom:1px solid var(--border);}
+.form-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:10px;}
+.form-input{width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:10px;}
+.form-input:last-child{margin-bottom:0;}
+.form-input:focus{border-color:var(--accent);}
+.form-input::placeholder{color:var(--text3);}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;color:var(--text3);}
+.empty-state p{font-size:14px;text-align:center;line-height:1.6;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-ok{background:var(--ok);}
+.dot-bad{background:var(--bad);}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 18px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:100;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* EDITOR */
+.crop-point{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);transform:translate(-50%,-50%);cursor:grab;z-index:10;touch-action:none;}
+.crop-point:active{cursor:grabbing;transform:translate(-50%,-50%) scale(1.2);}
+.filter-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font);white-space:nowrap;min-width:72px;transition:all .15s;}
+.filter-btn.selected{border-color:var(--accent);background:rgba(59,130,246,0.1);color:var(--accent);}
+.filter-preview{width:40px;height:28px;border-radius:4px;border:1px solid var(--border2);}
+/* RESUME VIEW */
+.ver-header{padding:20px 16px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+.ver-entity-name{font-size:20px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.ver-entity-sub{font-size:12px;color:var(--text2);font-family:var(--mono);}
+.ver-status{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;}
+.ver-status-ok{background:var(--ok-bg);color:var(--ok);}
+.ver-status-bad{background:var(--bad-bg);color:var(--bad);}
+.ver-doc{border-bottom:1px solid var(--border);background:var(--surface);}
+.ver-doc-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.ver-doc-name{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+.ver-preview{width:100%;max-height:500px;object-fit:contain;background:#111;display:block;}
+.ver-doc-actions{padding:10px 16px 14px;display:flex;gap:8px;}
+.ver-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);font-size:12px;color:var(--text2);cursor:pointer;text-decoration:none;font-family:var(--font);}
+.ver-btn-accent{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.08);color:var(--accent);}
+.ver-no-doc{padding:12px 16px 16px;font-size:12px;color:var(--text3);font-style:italic;}
+/* LIGHTBOX */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:300;display:none;align-items:center;justify-content:center;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:4px;}
+.lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ver-img-wrap{position:relative;cursor:zoom-in;}
+.ver-zoom-icon{position:absolute;top:10px;right:10px;width:34px;height:34px;background:rgba(0,0,0,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="toast" id="toast"></div>
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="s-home">
+  <div class="home-header">
+    <div class="home-top">
+      <div>
+        <div class="logo-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="app-name">DocuTransporte</div>
+        <div class="app-sub">Pregate</div>
+      </div>
+      <button class="icon-btn" onclick="toggleTheme()">
+        <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+    <div class="auth-bar">
+      <div class="auth-dot" id="auth-dot"></div>
+      <div class="auth-text" id="auth-text">No conectado a Google Drive</div>
+      <button class="auth-btn" id="auth-btn" onclick="handleAuth()">Conectar</button>
+    </div>
+  </div>
+  <div class="section-cards">
+    <div class="sec-card sec-card-chofer" onclick="openSection('chofer')">
+      <div class="sec-icon sec-icon-chofer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="sec-info">
+        <div class="sec-title">Transportistas</div>
+        <div class="sec-sub">Licencia · ART · Opcionales</div>
+        <div class="sec-count sec-count-chofer" id="cnt-chofer">0 registros</div>
+      </div>
+      <div style="color:var(--text3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="sec-card sec-card-tractor" onclick="openSection('tractor')">
+      <div class="sec-icon sec-icon-tractor">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <div class="sec-info">
+        <div class="sec-title">Tractores</div>
+        <div class="sec-sub">Céd. verde · VTV/RTO · Seguro</div>
+        <div class="sec-count sec-count-tractor" id="cnt-tractor">0 registros</div>
+      </div>
+      <div style="color:var(--text3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="sec-card sec-card-semi" onclick="openSection('semi')">
+      <div class="sec-icon sec-icon-semi">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8"><rect x="1" y="6" width="18" height="12" rx="1"/><path d="M19 10h3v6h-3"/><circle cx="5.5" cy="19.5" r="1.5"/><circle cx="15.5" cy="19.5" r="1.5"/></svg>
+      </div>
+      <div class="sec-info">
+        <div class="sec-title">Semirremolques</div>
+        <div class="sec-sub">Céd. verde · VTV/RTO · Seguro</div>
+        <div class="sec-count sec-count-semi" id="cnt-semi">0 registros</div>
+      </div>
+      <div style="color:var(--text3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="sec-card sec-card-transporte" onclick="openSection('transporte')">
+      <div class="sec-icon sec-icon-transporte">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      </div>
+      <div class="sec-info">
+        <div class="sec-title">Transportes</div>
+        <div class="sec-sub">Nómina ART · F931 · Póliza flota</div>
+        <div class="sec-count sec-count-transporte" id="cnt-transporte">0 registros</div>
+      </div>
+      <div style="color:var(--text3);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LISTA ══ -->
+<div class="screen" id="s-list">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('s-home')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info"><div class="topbar-title" id="list-title">—</div></div>
+  </div>
+  <div style="padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div class="search-wrap">
+      <div class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <input class="search-input" id="list-search" type="text" placeholder="Buscar…" oninput="filterEntities(this.value)" autocomplete="off">
+    </div>
+  </div>
+  <div class="list-header" id="list-sub-header">—</div>
+  <div id="entity-list" style="flex:1;overflow-y:auto;"></div>
+  <div class="empty-state" id="empty-list" style="display:none;">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <p>Sin resultados.<br>Agregá uno con el botón +</p>
+  </div>
+  <button class="fab" onclick="goNew()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+</div>
+
+<!-- ══ DETALLE ══ -->
+<div class="screen" id="s-detail">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('s-list')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="detail-name">—</div>
+      <div class="topbar-sub" id="detail-sub">—</div>
+    </div>
+    <button class="icon-btn" onclick="syncFromDrive()" title="Actualizar desde Drive">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+    <button class="icon-btn" onclick="deleteEntity()" title="Eliminar" style="color:var(--bad);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </button>
+  </div>
+  <div id="detail-content" style="overflow-y:auto;flex:1;"></div>
+</div>
+
+<!-- ══ RENOVAR ══ -->
+<div class="screen" id="s-renew">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('s-detail')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info">
+      <div class="topbar-title" id="renew-title">—</div>
+      <div class="topbar-sub" id="renew-sub">—</div>
+    </div>
+  </div>
+  <div style="overflow-y:auto;flex:1;">
+    <div class="cam-options">
+      <button class="btn-option selected" id="opt-cam" onclick="selectMode('cam')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Fotografiar
+      </button>
+      <button class="btn-option" id="opt-file" onclick="selectMode('file')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Cargar archivo
+      </button>
+    </div>
+    <div class="scan-area">
+      <div class="cam-placeholder" id="cam-placeholder" onclick="triggerCapture()">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.25;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <div class="cam-hint" id="cam-hint">Tocá para fotografiar</div>
+        <div style="font-size:10px;color:var(--text3);">Recorte automático activado</div>
+      </div>
+    </div>
+    <input type="file" id="file-cam" accept="image/*,.pdf" capture="environment" style="display:none;" onchange="handleFile(this)">
+    <input type="file" id="file-local" accept="image/*,.pdf" style="display:none;" onchange="handleFile(this)">
+    <input type="file" id="file-page" accept="image/*,.pdf" capture="environment" style="display:none;" onchange="handlePage(this)">
+    <div class="pages-label">Páginas</div>
+    <div class="pages-strip" id="pages-strip">
+      <div class="page-add" onclick="document.getElementById('file-page').click()">+</div>
+    </div>
+    <div class="ocr-box">
+      <div class="ocr-row">
+        <span class="ocr-label">Vencimiento</span>
+        <span class="ocr-chip ocr-chip-wait" id="ocr-chip" style="display:none;">Analizando…</span>
+      </div>
+      <div class="ocr-row">
+        <span class="ocr-label">Fecha</span>
+        <input class="ocr-input" id="ocr-date" type="date" onchange="updateFilename()">
+      </div>
+      <div class="ocr-row">
+        <span class="ocr-label">Archivo</span>
+        <span class="ocr-val" id="ocr-filename">—</span>
+      </div>
+    </div>
+    <div style="padding:0 16px 8px;font-size:11px;color:var(--text2);text-align:center;" id="upload-status"></div>
+    <button class="btn-primary" id="btn-upload" onclick="confirmUpload()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Confirmar y subir a Drive
+    </button>
+  </div>
+</div>
+
+<!-- ══ EDITOR DE IMAGEN ══ -->
+<div class="screen" id="s-editor">
+  <div class="topbar">
+    <button class="topbar-back" onclick="cancelEditor()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info">
+      <div class="topbar-title">Editar documento</div>
+    </div>
+    <button class="icon-btn" onclick="rotateImage()" title="Rotar" style="margin-right:4px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+    <button onclick="confirmEditor()" style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;">
+      Usar ✓
+    </button>
+  </div>
+
+  <!-- Canvas de edición ocupa toda la pantalla disponible -->
+  <div style="position:relative;background:#000;flex:1;overflow:hidden;" id="editor-wrap">
+    <canvas id="canvas-display" style="width:100%;height:100%;object-fit:contain;display:block;touch-action:none;"></canvas>
+    <div class="crop-point" id="cp-tl"></div>
+    <div class="crop-point" id="cp-tr"></div>
+    <div class="crop-point" id="cp-br"></div>
+    <div class="crop-point" id="cp-bl"></div>
+    <svg id="crop-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></svg>
+  </div>
+
+  <!-- Filtros fijos abajo -->
+  <div style="background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;">
+    <button class="filter-btn selected" id="f-original" onclick="applyFilter('original')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#888,#ddd);"></div>
+      <span>Original</span>
+    </button>
+    <button class="filter-btn" id="f-doc" onclick="applyFilter('doc')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#000,#fff);"></div>
+      <span>Documento</span>
+    </button>
+    <button class="filter-btn" id="f-bw" onclick="applyFilter('bw')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#333,#ccc);"></div>
+      <span>B&N</span>
+    </button>
+    <button class="filter-btn" id="f-bright" onclick="applyFilter('bright')">
+      <div class="filter-preview" style="background:linear-gradient(135deg,#aaa,#fff);"></div>
+      <span>Claro</span>
+    </button>
+  </div>
+  <canvas id="canvas-hidden" style="display:none;"></canvas>
+</div>
+
+<!-- ══ NUEVO ══ -->
+<div class="screen" id="s-new">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('s-list')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="topbar-info"><div class="topbar-title" id="new-title">—</div></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;" id="new-form-body"></div>
+</div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- ══ VISTA RESUMEN ══ -->
+<div class="screen" id="s-ver">
+  <div id="ver-content" style="overflow-y:auto;height:100%;">
+    <div style="padding:40px 20px;text-align:center;color:var(--text3);">Cargando…</div>
+  </div>
+</div>
+
+</div>
+<script>
+// ══ CREDENCIALES ══
+const CLIENT_ID = '491607847299-lo03fhrvlgkc8v31a1sl62qv82v9j3c9.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+const DRIVE_FOLDER_NAME = 'Documentacion-Transporte';
+const STATE_FILE_NAME = 'estado.json';
+
+// ══ CONFIG DOCS ══
+const DOCS = {
+  chofer:[
+    {id:'lic',name:'Licencia de conducir',required:true},
+    {id:'art',name:'ART',required:true},
+    {id:'f931',name:'F931',required:false},
+    {id:'clausula',name:'Cláusula de no repetición',required:false},
+  ],
+  tractor:[
+    {id:'cedverde',name:'Cédula verde',required:true},
+    {id:'vtv',name:'VTV / RTO',required:true},
+    {id:'seguro',name:'Seguro',required:true},
+    {id:'lideuda',name:'Libre de deuda',required:false},
+  ],
+  semi:[
+    {id:'cedverde',name:'Cédula verde',required:true},
+    {id:'vtv',name:'VTV / RTO',required:true},
+    {id:'seguro',name:'Seguro',required:true},
+    {id:'lideuda',name:'Libre de deuda',required:false},
+  ],
+  transporte:[
+    {id:'nominaart',name:'Nómina ART',required:true},
+    {id:'f931',name:'F931',required:true},
+    {id:'poliza',name:'Póliza de seguros flota',required:true},
+    {id:'clausula',name:'Cláusula de no repetición',required:false},
+  ],
+};
+const SECTION_LABELS = {chofer:'Transportistas',tractor:'Tractores',semi:'Semirremolques',transporte:'Transportes'};
+const SUBFOLDER = {chofer:'Choferes',tractor:'Tractores',semi:'Semis',transporte:'Transportes'};
+
+// ══ STATE ══
+let db = {chofer:[],tractor:[],semi:[],transporte:[]};
+let accessToken = null;
+let rootFolderId = null;
+let subFolderIds = {};
+let stateFileId = null;
+let currentSection = 'chofer';
+let currentEntityId = null;
+let currentDoc = null;
+let capturedPages = [];
+let inputMode = 'cam';
+let isDark = localStorage.getItem('dct-theme') !== 'light';
+
+// ══ THEME ══
+function applyTheme(){
+  document.documentElement.classList.toggle('light',!isDark);
+  const ic = document.getElementById('theme-icon');
+  ic.innerHTML = isDark
+    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+    : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+}
+function toggleTheme(){ isDark=!isDark; localStorage.setItem('dct-theme',isDark?'dark':'light'); applyTheme(); }
+applyTheme();
+
+// ══ AUTH ══
+function handleAuth(){
+  if(accessToken){ signOut(); return; }
+  requestToken(false);
+}
+
+function requestToken(silent){
+  const base = window.location.href.split('?')[0].split('#')[0];
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: base,
+    response_type: 'token',
+    scope: SCOPES,
+    prompt: silent ? 'none' : 'select_account'
+  });
+  if(silent){
+    // Silent refresh via hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    iframe.onload = ()=>{
+      try {
+        const hash = iframe.contentWindow.location.hash;
+        const p = new URLSearchParams(hash.substring(1));
+        const token = p.get('access_token');
+        if(token){ accessToken = token; document.body.removeChild(iframe); initDrive(); }
+        else { document.body.removeChild(iframe); }
+      } catch(e){ document.body.removeChild(iframe); }
+    };
+    document.body.appendChild(iframe);
+  } else {
+    // Save current state before redirect
+    localStorage.setItem('dct-db', JSON.stringify(db));
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+  }
+}
+
+function signOut(){
+  accessToken = null;
+  rootFolderId = null;
+  subFolderIds = {};
+  stateFileId = null;
+  localStorage.removeItem('dct-auth');
+  updateAuthUI(false);
+  updateCounts();
+  showToast('Sesión cerrada');
+}
+
+function updateAuthUI(connected, email=''){
+  const dot = document.getElementById('auth-dot');
+  const txt = document.getElementById('auth-text');
+  const btn = document.getElementById('auth-btn');
+  if(connected){
+    dot.classList.add('connected');
+    txt.textContent = email ? `Conectado · ${email}` : 'Conectado a Google Drive';
+    btn.textContent = 'Desconectar';
+    if(email) localStorage.setItem('dct-auth', JSON.stringify({email}));
+  } else {
+    dot.classList.remove('connected');
+    txt.textContent = 'No conectado a Google Drive';
+    btn.textContent = 'Conectar';
+  }
+}
+
+async function checkTokenFromUrl(){
+  const hash = window.location.hash;
+  if(hash){
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if(token){
+      window.history.replaceState(null,'',window.location.pathname);
+      accessToken = token;
+      const saved = localStorage.getItem('dct-db');
+      if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
+      updateAuthUI(true);
+      showToast('Conectando con Drive…');
+      await initDrive();
+      return;
+    }
+  }
+  // Restore db from localStorage
+  const saved = localStorage.getItem('dct-db');
+  if(saved){ try{ db = JSON.parse(saved); updateCounts(); }catch(e){} }
+  // Auto-reconnect silently if previously logged in
+  const auth = localStorage.getItem('dct-auth');
+  if(auth){
+    try{
+      const {email} = JSON.parse(auth);
+      updateAuthUI(false);
+      const dot = document.getElementById('auth-dot');
+      const txt = document.getElementById('auth-text');
+      if(txt) txt.textContent = `Reconectando con Drive…`;
+      // Silent reconnect via prompt=none redirect
+      const base = window.location.href.split('?')[0].split('#')[0];
+      const params = new URLSearchParams({
+        client_id: CLIENT_ID,
+        redirect_uri: base,
+        response_type: 'token',
+        scope: SCOPES,
+        prompt: 'none',
+        login_hint: email
+      });
+      window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+    }catch(e){}
+  }
+}
+
+// ══ DRIVE ══
+async function driveRequest(url, options={}){
+  const res = await fetch(url, {
+    ...options,
+    headers: {'Authorization': `Bearer ${accessToken}`, ...(options.headers||{})}
+  });
+  if(res.status===401){
+    accessToken = null;
+    updateAuthUI(false);
+    throw new Error('Token expirado, reconectá');
+  }
+  if(!res.ok){
+    const errText = await res.text().catch(()=>'');
+    throw new Error(`Error ${res.status}: ${errText.substring(0,100)}`);
+  }
+  return res;
+}
+
+async function initDrive(){
+  try {
+    // Get user info - optional, don't fail if it errors
+    let email = '';
+    try {
+      const uRes = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+        headers:{'Authorization': `Bearer ${accessToken}`}
+      });
+      if(uRes.ok){
+        const uData = await uRes.json();
+        email = uData.email||'';
+      }
+    } catch(e){}
+    updateAuthUI(true, email);
+
+    // Find or create root folder
+    const searchRes = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id,name)`
+    );
+    const searchData = await searchRes.json();
+    if(searchData.files && searchData.files.length > 0){
+      rootFolderId = searchData.files[0].id;
+    } else {
+      rootFolderId = await createFolder(DRIVE_FOLDER_NAME, null);
+    }
+
+    // Create subfolders
+    for(const [key, sec] of Object.entries(SUBFOLDER)){
+      const sfRes = await driveRequest(
+        `https://www.googleapis.com/drive/v3/files?q=name='${sec}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
+      );
+      const sfData = await sfRes.json();
+      if(sfData.files && sfData.files.length > 0){
+        subFolderIds[key] = sfData.files[0].id;
+      } else {
+        subFolderIds[key] = await createFolder(sec, rootFolderId);
+      }
+    }
+
+    // Load state
+    await loadStateFromDrive();
+    showToast('✓ Drive conectado correctamente');
+    // Run cleanup in background (non-blocking)
+    setTimeout(()=>cleanupOldDriveFiles(), 3000);
+  } catch(e){
+    showToast('Error conectando con Drive: '+e.message);
+    console.error(e);
+  }
+}
+
+async function createFolder(name, parentId){
+  const meta = {name, mimeType:'application/vnd.google-apps.folder'};
+  if(parentId) meta.parents = [parentId];
+  const res = await driveRequest('https://www.googleapis.com/drive/v3/files', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(meta)
+  });
+  const data = await res.json();
+  return data.id;
+}
+
+async function loadStateFromDrive(){
+  try {
+    const res = await driveRequest(
+      `https://www.googleapis.com/drive/v3/files?q=name='${STATE_FILE_NAME}' and '${rootFolderId}' in parents and trashed=false&fields=files(id)`
+    );
+    const data = await res.json();
+    if(data.files && data.files.length > 0){
+      stateFileId = data.files[0].id;
+      localStorage.setItem('dct-meta', JSON.stringify({stateFileId}));
+      const contentRes = await driveRequest(
+        `https://www.googleapis.com/drive/v3/files/${stateFileId}?alt=media`
+      );
+      const state = await contentRes.json();
+      // Merge Drive state (source of truth) but deduplicate by id
+      const merged = {...{chofer:[],tractor:[],semi:[],transporte:[]}, ...state};
+      ['chofer','tractor','semi','transporte'].forEach(sec=>{
+        const seen = new Set();
+        merged[sec] = (merged[sec]||[]).filter(e=>{ if(seen.has(e.id)) return false; seen.add(e.id); return true; });
+      });
+      db = merged;
+    } else {
+      stateFileId = null;
+      await saveStateToDrive();
+    }
+    updateCounts();
+    showToast('✓ Estado actualizado desde Drive');
+  } catch(e){
+    showToast('Error cargando estado: '+e.message);
+  }
+}
+
+async function saveStateToDrive(){
+  const content = JSON.stringify(db);
+  const blob = new Blob([content], {type:'application/json'});
+  if(stateFileId){
+    await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${stateFileId}?uploadType=media`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: content
+    });
+  } else {
+    const boundary = 'boundary123';
+    const meta = JSON.stringify({name:STATE_FILE_NAME, parents:[rootFolderId]});
+    const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+    const res = await driveRequest('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method:'POST',
+      headers:{'Content-Type':`multipart/related; boundary=${boundary}`},
+      body
+    });
+    const data = await res.json();
+    stateFileId = data.id;
+    // Make estado.json publicly readable so resume view can fetch it
+    try {
+      await driveRequest(`https://www.googleapis.com/drive/v3/files/${stateFileId}/permissions`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({role:'reader', type:'anyone'})
+      });
+    } catch(e){ console.warn('Could not make state public', e); }
+  }
+  // Always save stateFileId to localStorage for resume view
+  localStorage.setItem('dct-meta', JSON.stringify({stateFileId}));
+  localStorage.setItem('dct-db', JSON.stringify(db));
+}
+
+async function getOrCreateEntityFolder(entityLabel, section){
+  const parentId = subFolderIds[section];
+  const safeName = entityLabel.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
+  const res = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?q=name='${safeName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
+  );
+  const data = await res.json();
+  if(data.files && data.files.length > 0) return data.files[0].id;
+  return await createFolder(safeName, parentId);
+}
+
+async function uploadFileToDrive(file, filename, folderId){
+  const boundary = 'boundary456';
+  const meta = JSON.stringify({name:filename, parents:[folderId]});
+  const arrBuf = await file.arrayBuffer();
+  const enc = new TextEncoder();
+  const pre = enc.encode(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${file.type||'application/octet-stream'}\r\n\r\n`);
+  const suf = enc.encode(`\r\n--${boundary}--`);
+  const body = new Uint8Array(pre.length + arrBuf.byteLength + suf.length);
+  body.set(pre, 0);
+  body.set(new Uint8Array(arrBuf), pre.length);
+  body.set(suf, pre.length + arrBuf.byteLength);
+  const res = await driveRequest('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+    method:'POST',
+    headers:{'Content-Type':`multipart/related; boundary=${boundary}`},
+    body
+  });
+  return await res.json();
+}
+
+// ══ AUTO-CLEANUP: eliminar archivos de Drive con más de 1 año (excepto cédula verde) ══
+async function cleanupOldDriveFiles(){
+  if(!accessToken || !rootFolderId) return;
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const cutoff = oneYearAgo.toISOString();
+  let changed = false;
+  for(const sec of ['chofer','tractor','semi','transporte']){
+    for(const entity of (db[sec]||[])){
+      for(const [docId, docData] of Object.entries(entity.docs||{})){
+        if(NEVER_EXPIRE_DOCS.has(docId)) continue; // Nunca borrar cédula verde
+        if(!docData || !docData.fileId) continue;
+        // Check if vencimiento date is over a year old (or no vto)
+        if(docData.vto){
+          const vtoDate = new Date(docData.vto);
+          if(vtoDate >= oneYearAgo) continue; // Still within 1 year
+        }
+        // Try to delete from Drive
+        try {
+          await driveRequest(`https://www.googleapis.com/drive/v3/files/${docData.fileId}`, {method:'DELETE'});
+          // Clear fileId from db but keep vto/file record
+          docData.fileId = null;
+          docData.driveUrl = '#';
+          docData.previewUrl = '';
+          changed = true;
+          console.log(`Auto-cleanup: deleted old file for ${entity.label} / ${docId}`);
+        } catch(ex){ console.warn('Cleanup failed for', docData.fileId, ex); }
+      }
+    }
+  }
+  if(changed){
+    try { await saveStateToDrive(); } catch(e){}
+    showToast('🗑️ Archivos vencidos (+1 año) eliminados de Drive');
+  }
+}
+
+
+async function runOCR(file){
+  try {
+    document.getElementById('ocr-chip').style.display='inline';
+    document.getElementById('ocr-chip').textContent='Analizando…';
+    document.getElementById('ocr-chip').className='ocr-chip ocr-chip-wait';
+
+    const arrBuf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(arrBuf)));
+    const body = {requests:[{image:{content:b64},features:[{type:'TEXT_DETECTION'}]}]};
+
+    const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=&access_token=${accessToken}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+    // Buscar fechas en formato DD/MM/AAAA o DD-MM-AAAA o AAAA-MM-DD
+    const patterns = [
+      /(\d{2})[\/-](\d{2})[\/-](\d{4})/g,
+      /(\d{4})-(\d{2})-(\d{2})/g,
+    ];
+
+    let dates = [];
+    for(const p of patterns){
+      let m;
+      while((m=p.exec(text))!==null){
+        let y,mo,d;
+        if(m[1].length===4){ y=m[1]; mo=m[2]; d=m[3]; }
+        else { d=m[1]; mo=m[2]; y=m[3]; }
+        const dt = new Date(`${y}-${mo}-${d}`);
+        if(!isNaN(dt) && dt>new Date()) dates.push({y,mo,d,dt});
+      }
+    }
+
+    if(dates.length > 0){
+      // Tomar la fecha más lejana (probable vencimiento)
+      dates.sort((a,b)=>b.dt-a.dt);
+      const best = dates[0];
+      document.getElementById('ocr-date').value=`${best.y}-${best.mo}-${best.d}`;
+      document.getElementById('ocr-chip').textContent='Detectado automáticamente';
+      document.getElementById('ocr-chip').className='ocr-chip';
+      updateFilename();
+      showToast('📅 Fecha detectada: '+best.d+'/'+best.mo+'/'+best.y);
+    } else {
+      document.getElementById('ocr-chip').textContent='No detectado · ingresá manual';
+      document.getElementById('ocr-chip').className='ocr-chip ocr-chip-wait';
+      showToast('No se detectó fecha · ingresala manualmente');
+    }
+  } catch(e){
+    document.getElementById('ocr-chip').style.display='none';
+    showToast('OCR no disponible · ingresá fecha manual');
+  }
+}
+
+// ══ NAV ══
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══ COUNTS ══
+// Docs that never expire (cédula verde = lifetime document)
+const NEVER_EXPIRE_DOCS = new Set(['cedverde']);
+
+function isVencido(vto, docId){
+  if(!vto) return true;
+  if(docId && NEVER_EXPIRE_DOCS.has(docId)) return false;
+  // Compare date-only (strip time) so same day = NOT vencido
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp   = new Date(vto); exp.setHours(0,0,0,0);
+  return exp < today;
+}
+function entityStatus(e,sec){
+  return DOCS[sec].filter(d=>d.required).some(d=>!e.docs[d.id]||isVencido(e.docs[d.id].vto, d.id))?'bad':'ok';
+}
+function updateCounts(){
+  ['chofer','tractor','semi','transporte'].forEach(s=>{
+    const n=db[s]?db[s].length:0;
+    const el=document.getElementById('cnt-'+s);
+    if(el) el.textContent=n+' '+(n===1?'registro':'registros');
+  });
+}
+
+// ══ SYNC ══
+async function syncFromDrive(){
+  if(!accessToken){ showToast('Conectá Drive primero'); return; }
+  showToast('Actualizando desde Drive…');
+  await loadStateFromDrive();
+  renderDetail();
+}
+
+// ══ SECTION LIST ══
+function openSection(sec){
+  currentSection=sec;
+  document.getElementById('list-title').textContent=SECTION_LABELS[sec];
+  document.getElementById('list-sub-header').textContent=
+    sec==='chofer'?'Buscar por nombre o DNI':sec==='transporte'?'Buscar por empresa':'Buscar por patente';
+  document.getElementById('list-search').value='';
+  renderEntityList(db[sec]||[]);
+  showScreen('s-list');
+}
+
+function getAvClass(sec,st){
+  if(st==='bad') return 'av-bad';
+  return {chofer:'av-blue',tractor:'av-green',semi:'av-amber',transporte:'av-purple'}[sec];
+}
+function getInitials(e,sec){
+  if(sec==='chofer'){ const p=e.label.split(/[\s,]+/).filter(Boolean); return (p[0]?.[0]||'')+(p[1]?.[0]||''); }
+  if(sec==='transporte') return e.label.substring(0,2);
+  return e.label.substring(0,4);
+}
+
+function renderEntityList(list){
+  const el=document.getElementById('entity-list');
+  const empty=document.getElementById('empty-list');
+  if(!list.length){ el.innerHTML=''; empty.style.display='flex'; return; }
+  empty.style.display='none';
+  el.innerHTML=list.map(e=>{
+    const st=entityStatus(e,currentSection);
+    const badge=st==='ok'?'<span class="badge badge-ok">Vigente</span>':'<span class="badge badge-bad">Vencido</span>';
+    return `<div class="entity-row" onclick="openEntity('${e.id}')">
+      <div class="avatar ${getAvClass(currentSection,st)}">${getInitials(e,currentSection)}</div>
+      <div class="row-info"><div class="row-name">${e.label}</div><div class="row-sub">${e.sub||''}</div></div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+function normalizeSearch(s){ return (s||'').toLowerCase().replace(/\./g,'').trim(); }
+function filterEntities(q){
+  const nq = normalizeSearch(q);
+  const filtered=(db[currentSection]||[]).filter(e=>!nq||normalizeSearch(e.label).includes(nq)||normalizeSearch(e.sub||'').includes(nq));
+  renderEntityList(filtered);
+}
+
+// ══ DETAIL ══
+function openEntity(id){
+  currentEntityId=id;
+  const e=(db[currentSection]||[]).find(x=>x.id===id);
+  document.getElementById('detail-name').textContent=e.label;
+  document.getElementById('detail-sub').textContent=e.sub||'';
+  renderDetail();
+  showScreen('s-detail');
+}
+
+function formatVto(vto){
+  if(!vto) return '—';
+  const [y,m,d]=vto.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// ══ CUSTOM CONFIRM ══
+function showConfirm(msg, onOk){
+  let modal = document.getElementById('confirm-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'confirm-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;max-width:320px;width:100%;">
+    <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:20px;">${msg}</p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="document.getElementById('confirm-modal').style.display='none'" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--font);">Cancelar</button>
+      <button id="confirm-ok" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--bad);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">Eliminar</button>
+    </div>
+  </div>`;
+  modal.style.display='flex';
+  document.getElementById('confirm-ok').onclick=()=>{ modal.style.display='none'; onOk(); };
+}
+
+async function deleteEntity(){
+  const e = (db[currentSection]||[]).find(x=>x.id===currentEntityId);
+  if(!e) return;
+  showConfirm(`¿Eliminar <strong>${e.label}</strong> y toda su documentación?`, async ()=>{
+    showToast('Eliminando…');
+    // 1. Remove from db first
+    db[currentSection] = (db[currentSection]||[]).filter(x=>x.id!==currentEntityId);
+    localStorage.setItem('dct-db', JSON.stringify(db));
+    currentEntityId = null;
+    updateCounts();
+
+    // 2. Save updated estado.json to Drive (critical step)
+    if(accessToken && stateFileId){
+      try {
+        await saveStateToDrive();
+      } catch(err){ console.warn('Error saving state after delete', err); }
+    }
+
+    // 3. Delete folder from Drive (best effort)
+    if(accessToken && subFolderIds[currentSection] && e){
+      try {
+        const safeName = e.label.replace(/[^a-zA-Z0-9_\-\.]/g,'_');
+        const res = await driveRequest(
+          `https://www.googleapis.com/drive/v3/files?q=name='${safeName}' and '${subFolderIds[currentSection]}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`
+        );
+        const data = await res.json();
+        if(data.files && data.files.length > 0){
+          await driveRequest(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}`, {method:'DELETE'});
+        }
+      } catch(err){ console.warn('Drive folder delete failed', err); }
+    }
+
+    showToast('✓ Eliminado correctamente');
+    showScreen('s-list');
+    renderEntityList(db[currentSection]||[]);
+  });
+}
+
+function getResumeUrl(sec, id){
+  return `${window.location.origin}${window.location.pathname}?ver=${sec}&id=${id}`;
+}
+
+function copyResumeUrl(){
+  const url = getResumeUrl(currentSection, currentEntityId);
+  navigator.clipboard.writeText(url).then(()=>showToast('✓ URL copiada al portapapeles'));
+}
+
+function renderDetail(){
+  const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
+  if(!e) return;
+  const docs=DOCS[currentSection];
+  const req=docs.filter(d=>d.required);
+  const opt=docs.filter(d=>!d.required);
+  const loaded_opt=opt.filter(d=>e.docs[d.id]);
+  const pending_opt=opt.filter(d=>!e.docs[d.id]);
+
+  const resumeUrl = getResumeUrl(currentSection, currentEntityId);
+  let html=`<div style="margin:12px 16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);">
+    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">URL Resumen para ALET</div>
+    <div style="font-size:11px;color:var(--text2);font-family:var(--mono);word-break:break-all;margin-bottom:10px;">${resumeUrl}</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="copyResumeUrl()" style="flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Copiar URL</button>
+      <a href="${resumeUrl}" target="_blank" style="flex:1;padding:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ir al enlace
+      </a>
+    </div>
+  </div>`;
+
+  html+='<div class="doc-section-title">Obligatorios</div>';
+  req.forEach(doc=>{ html+=renderDocCard(doc,e.docs[doc.id]); });
+  if(loaded_opt.length){ html+='<div class="doc-section-title">Opcionales</div>'; loaded_opt.forEach(doc=>{ html+=renderDocCard(doc,e.docs[doc.id]); }); }
+  pending_opt.forEach(doc=>{
+    html+=`<button class="btn-optional" onclick="openRenew('${doc.id}','${doc.name}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Agregar: ${doc.name}</button>`;
+  });
+  document.getElementById('detail-content').innerHTML=html;
+}
+
+function renderDocCard(doc,data){
+  const neverExpires = NEVER_EXPIRE_DOCS.has(doc.id);
+  const vencido=!data||(neverExpires ? false : isVencido(data.vto, doc.id));
+  const dot=vencido?'dot-bad':'dot-ok';
+  const badge = neverExpires && data
+    ? `<span class="badge badge-ok">Sin vencimiento</span>`
+    : vencido
+      ? `<span class="badge badge-bad">${data?'Venció '+formatVto(data.vto):'Sin cargar'}</span>`
+      : `<span class="badge badge-ok">Vence ${formatVto(data.vto)}</span>`;
+  const driveBtn=data&&data.driveUrl&&data.driveUrl!=='#'
+    ?`<button class="btn-sm btn-sm-accent" onclick="window.open('${data.driveUrl}','_blank')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ver en Drive</button>` : '';
+  return `<div class="doc-card">
+    <div class="doc-top"><div class="doc-left"><div class="status-dot ${dot}"></div><div class="doc-name">${doc.name}</div></div>${badge}</div>
+    ${data?`<div class="doc-file">${data.file}</div>`:''}
+    <div class="doc-actions">
+      <button class="btn-sm" onclick="openRenew('${doc.id}','${doc.name}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        ${data?'Renovar':'Cargar'}</button>
+      ${driveBtn}
+    </div></div>`;
+}
+
+// ══ RENEW ══
+function openRenew(docId,docName){
+  currentDoc={docId,docName};
+  capturedPages=[];
+  inputMode='cam';
+  const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
+  document.getElementById('renew-title').textContent=docName;
+  document.getElementById('renew-sub').textContent=e.label;
+  document.getElementById('ocr-date').value='';
+  document.getElementById('ocr-chip').style.display='none';
+  document.getElementById('ocr-filename').textContent='—';
+  document.getElementById('upload-status').textContent='Se guardará en Google Drive automáticamente';
+  document.getElementById('btn-upload').disabled=false;
+  document.getElementById('opt-cam').classList.add('selected');
+  document.getElementById('opt-file').classList.remove('selected');
+  document.getElementById('cam-hint').textContent='Tocá para fotografiar';
+  renderPages();
+  showScreen('s-renew');
+}
+
+function selectMode(mode){
+  inputMode=mode;
+  document.getElementById('opt-cam').classList.toggle('selected',mode==='cam');
+  document.getElementById('opt-file').classList.toggle('selected',mode==='file');
+  document.getElementById('cam-hint').textContent=mode==='cam'?'Tocá para fotografiar':'Tocá para seleccionar archivo';
+}
+document.getElementById('cam-placeholder').onclick=triggerCapture;
+function triggerCapture(){ document.getElementById(inputMode==='cam'?'file-cam':'file-local').click(); }
+
+function handleFile(input){
+  const f=input.files[0]; if(!f) return;
+  input.value='';
+  if(f.type.startsWith('image/')){
+    // Open editor for images
+    openEditor(f, (editedFile)=>{
+      capturedPages=[editedFile];
+      renderPages();
+      if(accessToken) runOCR(editedFile);
+    });
+  } else {
+    // PDF - add directly without editor
+    capturedPages=[f]; renderPages();
+    showToast('PDF cargado · ingresá fecha manualmente');
+  }
+}
+function handlePage(input){
+  const f=input.files[0]; if(!f) return;
+  input.value='';
+  if(f.type.startsWith('image/')){
+    openEditor(f, (editedFile)=>{
+      capturedPages.push(editedFile); renderPages();
+    });
+  } else {
+    capturedPages.push(f); renderPages();
+  }
+}
+function renderPages(){
+  const strip=document.getElementById('pages-strip');
+  let html=capturedPages.map(f=>`<div class="page-thumb"><img src="${URL.createObjectURL(f)}"></div>`).join('');
+  html+=`<div class="page-add" onclick="document.getElementById('file-page').click()">+</div>`;
+  if(capturedPages.length) html+=`<span style="font-size:11px;color:var(--text2);">${capturedPages.length} pág.</span>`;
+  strip.innerHTML=html;
+}
+
+function updateFilename(){
+  const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
+  const dv=document.getElementById('ocr-date').value;
+  if(!dv||!e||!currentDoc){ document.getElementById('ocr-filename').textContent='—'; return; }
+  const [y,m,d]=dv.split('-');
+  const prefix=currentSection==='chofer'
+    ?e.label.replace(/,\s*/g,'_').replace(/\s+/g,'-').toUpperCase()
+    :e.label.replace(/\s+/g,'-').toUpperCase();
+  document.getElementById('ocr-filename').textContent=`${prefix}_${currentDoc.docId.toUpperCase()}_vto-${d}-${m}-${y}.pdf`;
+}
+
+async function generatePreviewJPG(srcFile){
+  return new Promise(async (resolve)=>{
+    try {
+      if(srcFile.type === 'application/pdf'){
+        // Use PDF.js to render first page
+        const arrBuf = await srcFile.arrayBuffer();
+        const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
+        if(!pdfjsLib){ resolve(null); return; }
+        const pdf = await pdfjsLib.getDocument({data: arrBuf}).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({scale: 1.5});
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+        canvas.toBlob(resolve, 'image/jpeg', 0.85);
+      } else {
+        // Image file
+        const img = new Image();
+        const url = URL.createObjectURL(srcFile);
+        img.onload = ()=>{
+          const MAX = 1200;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width  = img.width  * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(resolve, 'image/jpeg', 0.85);
+        };
+        img.onerror = ()=>{ URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+      }
+    } catch(e){ console.warn('Preview error', e); resolve(null); }
+  });
+}
+
+async function confirmUpload(){
+  if(!capturedPages.length){ showToast('⚠️ Primero cargá el documento'); return; }
+  const dv=document.getElementById('ocr-date').value;
+  if(!dv){ showToast('⚠️ Ingresá la fecha de vencimiento'); return; }
+  const filename=document.getElementById('ocr-filename').textContent;
+  const btn=document.getElementById('btn-upload');
+  const statusEl=document.getElementById('upload-status');
+
+  if(!accessToken){
+    const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
+    e.docs[currentDoc.docId]={vto:dv,file:filename,driveUrl:'#',previewUrl:''};
+    saveDB(); updateCounts(); showToast('Guardado localmente (sin Drive)');
+    setTimeout(()=>{ showScreen('s-detail'); renderDetail(); },1000);
+    return;
+  }
+
+  btn.disabled=true;
+  btn.innerHTML='<div class="spinner"></div> Subiendo a Drive…';
+
+  try {
+    const e=(db[currentSection]||[]).find(x=>x.id===currentEntityId);
+    statusEl.textContent='Buscando carpeta en Drive…';
+    const folderId=await getOrCreateEntityFolder(e.label, currentSection);
+
+    // Delete old file from Drive if it exists (so we always have fresh content)
+    const oldDoc = e.docs[currentDoc.docId];
+    if(oldDoc && oldDoc.fileId){
+      try {
+        statusEl.textContent='Reemplazando documento anterior…';
+        await driveRequest(`https://www.googleapis.com/drive/v3/files/${oldDoc.fileId}`, {method:'DELETE'});
+      } catch(ex){ console.warn('Could not delete old file', ex); }
+    }
+
+    // Upload main file
+    statusEl.textContent='Subiendo archivo…';
+    const uploadedFile=await uploadFileToDrive(capturedPages[0], filename, folderId);
+    const driveUrl = uploadedFile.webViewLink||'#';
+    const fileId   = uploadedFile.id||'';
+
+    // Generate and upload preview JPG - store as base64 in state
+    let previewUrl = '';
+    try {
+      statusEl.textContent='Generando preview…';
+      const previewBlob = await generatePreviewJPG(capturedPages[0]);
+      if(previewBlob){
+        // Convert to base64 and store directly in estado.json
+        const base64 = await new Promise(res=>{
+          const reader = new FileReader();
+          reader.onload = e => res(e.target.result);
+          reader.readAsDataURL(previewBlob);
+        });
+        previewUrl = base64; // data:image/jpeg;base64,...
+        // Also upload to Drive as backup
+        try {
+          const previewName = filename.replace(/\.[^.]+$/, '_preview.jpg');
+          const previewFile = new File([previewBlob], previewName, {type:'image/jpeg'});
+          await uploadFileToDrive(previewFile, previewName, folderId);
+        } catch(e){}
+      }
+    } catch(e){ console.warn('Preview generation failed', e); }
+
+    e.docs[currentDoc.docId]={vto:dv, file:filename, driveUrl, fileId, previewUrl};
+    statusEl.textContent='Guardando estado…';
+    await saveStateToDrive();
+    updateCounts();
+    showToast('✓ Subido a Drive correctamente');
+    btn.disabled=false;
+    btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar y subir a Drive';
+    statusEl.textContent='';
+    setTimeout(()=>{ showScreen('s-detail'); renderDetail(); },1000);
+  } catch(err){
+    btn.disabled=false;
+    btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Confirmar y subir a Drive';
+    statusEl.textContent='';
+    showToast('Error al subir: '+err.message);
+  }
+}
+
+// ══ NUEVO ══
+function goNew(){
+  document.getElementById('new-title').textContent='Nuevo · '+SECTION_LABELS[currentSection];
+  const body=document.getElementById('new-form-body');
+  if(currentSection==='chofer'){
+    body.innerHTML=`<div class="form-section"><div class="form-label">Datos del chofer</div>
+      <input class="form-input" id="nf-apellido" placeholder="Apellido" style="text-transform:uppercase;">
+      <input class="form-input" id="nf-nombre" placeholder="Nombre" style="text-transform:uppercase;">
+      <input class="form-input" id="nf-dni" placeholder="DNI" type="number">
+      <input class="form-input" id="nf-empresa" placeholder="Empresa / Transportista" style="text-transform:uppercase;margin-bottom:0;">
+    </div><button class="btn-primary" style="margin-top:8px;" onclick="saveNew()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Guardar</button>`;
+  } else if(currentSection==='transporte'){
+    body.innerHTML=`<div class="form-section"><div class="form-label">Datos de la empresa</div>
+      <input class="form-input" id="nf-empresa" placeholder="Nombre de la empresa" style="text-transform:uppercase;">
+      <input class="form-input" id="nf-cuit" placeholder="CUIT" style="margin-bottom:0;">
+    </div><button class="btn-primary" style="margin-top:8px;" onclick="saveNew()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Guardar</button>`;
+  } else {
+    const lbl=currentSection==='tractor'?'Tractor':'Semi';
+    body.innerHTML=`<div class="form-section"><div class="form-label">Datos del ${lbl}</div>
+      <input class="form-input" id="nf-patente" placeholder="Patente" style="text-transform:uppercase;">
+      <input class="form-input" id="nf-marca" placeholder="Marca / Tipo" style="text-transform:uppercase;">
+      <input class="form-input" id="nf-anio" placeholder="Año" type="number" style="margin-bottom:0;">
+    </div><button class="btn-primary" style="margin-top:8px;" onclick="saveNew()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Guardar</button>`;
+  }
+  showScreen('s-new');
+}
+
+async function saveNew(){
+  let entry;
+  if(currentSection==='chofer'){
+    const ap=(document.getElementById('nf-apellido').value||'').trim().toUpperCase();
+    const nm=(document.getElementById('nf-nombre').value||'').trim().toUpperCase();
+    const dni=(document.getElementById('nf-dni').value||'').trim();
+    const emp=(document.getElementById('nf-empresa').value||'').trim().toUpperCase();
+    if(!ap||!nm||!dni){ showToast('⚠️ Apellido, nombre y DNI son obligatorios'); return; }
+    const dniF=dni.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+    entry={id:'c'+Date.now(),label:`${ap}, ${nm}`,sub:`DNI ${dniF}${emp?' · '+emp:''}`,docs:{}};
+  } else if(currentSection==='transporte'){
+    const emp=(document.getElementById('nf-empresa').value||'').trim().toUpperCase();
+    const cuit=(document.getElementById('nf-cuit').value||'').trim();
+    if(!emp){ showToast('⚠️ El nombre es obligatorio'); return; }
+    entry={id:'tp'+Date.now(),label:emp,sub:cuit?`CUIT ${cuit}`:'',docs:{}};
+  } else {
+    const pat=(document.getElementById('nf-patente').value||'').trim().toUpperCase();
+    const marca=(document.getElementById('nf-marca').value||'').trim().toUpperCase();
+    const anio=(document.getElementById('nf-anio').value||'').trim();
+    if(!pat){ showToast('⚠️ La patente es obligatoria'); return; }
+    entry={id:'v'+Date.now(),label:pat,sub:[marca,anio].filter(Boolean).join(' · '),docs:{}};
+  }
+  if(!db[currentSection]) db[currentSection]=[];
+  db[currentSection].push(entry);
+  if(accessToken){ try{ await saveStateToDrive(); }catch(e){} }
+  updateCounts();
+  showToast('✓ Guardado correctamente');
+  setTimeout(()=>{ openEntity(entry.id); },600);
+}
+
+// ══ IMAGE EDITOR ══
+let editorImg = null;
+let editorRotation = 0;
+let editorFilter = 'original';
+let cropPoints = []; // [{x,y}] in display %
+let draggingCorner = -1;
+let editorCallback = null;
+
+function openEditor(file, callback){
+  editorCallback = callback;
+  editorRotation = 0;
+  editorFilter = 'original';
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      editorImg = img;
+      cropPoints = [{x:5,y:5},{x:95,y:5},{x:95,y:95},{x:5,y:95}];
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('selected'));
+      document.getElementById('f-original').classList.add('selected');
+      showScreen('s-editor');
+      // Wait for screen to render before drawing
+      requestAnimationFrame(()=>{ requestAnimationFrame(renderEditor); });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderEditor(){
+  if(!editorImg) return;
+  const wrap = document.getElementById('editor-wrap');
+  const canvas = document.getElementById('canvas-display');
+  const ww = wrap.clientWidth  || window.innerWidth;
+  const wh = wrap.clientHeight || window.innerHeight - 120;
+
+  let iw = editorImg.naturalWidth;
+  let ih = editorImg.naturalHeight;
+
+  // Apply rotation
+  const rot = editorRotation;
+  const swapped = rot % 180 !== 0;
+  const canvasW = swapped ? ih : iw;
+  const canvasH = swapped ? iw : ih;
+
+  // Scale to fit wrap
+  const scale = Math.min(ww / canvasW, wh / canvasH);
+  const displayW = canvasW * scale;
+  const displayH = canvasH * scale;
+
+  canvas.width  = canvasW;
+  canvas.height = canvasH;
+  canvas.style.width  = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left = ((ww - displayW) / 2) + 'px';
+  canvas.style.top  = ((wh - displayH) / 2) + 'px';
+
+  // Also size the overlay and handles container
+  const overlay = document.getElementById('crop-overlay');
+  overlay.style.left   = canvas.style.left;
+  overlay.style.top    = canvas.style.top;
+  overlay.style.width  = displayW + 'px';
+  overlay.style.height = displayH + 'px';
+  ['cp-tl','cp-tr','cp-br','cp-bl'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.style.setProperty('--dw', displayW+'px'); el.style.setProperty('--dh', displayH+'px'); }
+  });
+  // Store display rect for drag calculation
+  wrap._displayW = displayW;
+  wrap._displayH = displayH;
+  wrap._offsetX  = (ww - displayW) / 2;
+  wrap._offsetY  = (wh - displayH) / 2;
+
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.translate(canvasW/2, canvasH/2);
+  ctx.rotate(rot * Math.PI/180);
+  ctx.drawImage(editorImg, -iw/2, -ih/2);
+  ctx.restore();
+  applyFilterToCanvas(ctx, canvasW, canvasH);
+  requestAnimationFrame(()=>updateCropOverlay());
+}
+
+function applyFilterToCanvas(ctx, w, h){
+  if(editorFilter==='original') return;
+  const id = ctx.getImageData(0,0,w,h);
+  const d = id.data;
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i],g=d[i+1],b=d[i+2];
+    if(editorFilter==='bw'){
+      const gray=0.299*r+0.587*g+0.114*b;
+      d[i]=d[i+1]=d[i+2]=gray;
+    } else if(editorFilter==='doc'){
+      // High contrast B&W
+      const gray=0.299*r+0.587*g+0.114*b;
+      const v = gray > 128 ? Math.min(255,gray*1.3) : Math.max(0,gray*0.6);
+      d[i]=d[i+1]=d[i+2]=v;
+    } else if(editorFilter==='bright'){
+      d[i]=Math.min(255,r*1.2+20);
+      d[i+1]=Math.min(255,g*1.2+20);
+      d[i+2]=Math.min(255,b*1.2+20);
+    }
+  }
+  ctx.putImageData(id,0,0);
+}
+
+function updateCropOverlay(){
+  const wrap = document.getElementById('editor-wrap');
+  const dw = wrap._displayW || wrap.clientWidth;
+  const dh = wrap._displayH || wrap.clientHeight;
+  const svg = document.getElementById('crop-overlay');
+  const ids = ['cp-tl','cp-tr','cp-br','cp-bl'];
+
+  const pts = cropPoints.map(p=>({
+    x: p.x/100 * dw,
+    y: p.y/100 * dh
+  }));
+
+  svg.setAttribute('viewBox',`0 0 ${dw} ${dh}`);
+  svg.innerHTML = `<polygon points="${pts.map(p=>`${p.x},${p.y}`).join(' ')}" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="2.5"/>`;
+
+  cropPoints.forEach((p,i)=>{
+    const el = document.getElementById(ids[i]);
+    if(!el) return;
+    const ox = wrap._offsetX || 0;
+    const oy = wrap._offsetY || 0;
+    el.style.left = (ox + p.x/100*dw) + 'px';
+    el.style.top  = (oy + p.y/100*dh) + 'px';
+  });
+}
+
+function rotateImage(){
+  editorRotation = (editorRotation + 90) % 360;
+  renderEditor();
+}
+
+function applyFilter(f){
+  editorFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('f-'+f).classList.add('selected');
+  renderEditor();
+}
+
+// Drag crop points
+['cp-tl','cp-tr','cp-br','cp-bl'].forEach((id,i)=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  const onStart = (e)=>{
+    draggingCorner = i;
+    e.preventDefault();
+  };
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('touchstart', onStart, {passive:false});
+});
+
+document.addEventListener('mousemove', onDragMove);
+document.addEventListener('touchmove', onDragMove, {passive:false});
+document.addEventListener('mouseup', ()=>{ draggingCorner=-1; });
+document.addEventListener('touchend', ()=>{ draggingCorner=-1; });
+
+function onDragMove(e){
+  if(draggingCorner<0) return;
+  e.preventDefault();
+  const wrap = document.getElementById('editor-wrap');
+  const wRect = wrap.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const ox = wrap._offsetX || 0;
+  const oy = wrap._offsetY || 0;
+  const dw = wrap._displayW || wrap.clientWidth;
+  const dh = wrap._displayH || wrap.clientHeight;
+  const relX = clientX - wRect.left - ox;
+  const relY = clientY - wRect.top  - oy;
+  const x = Math.max(2, Math.min(98, relX / dw * 100));
+  const y = Math.max(2, Math.min(98, relY / dh * 100));
+  cropPoints[draggingCorner] = {x, y};
+  updateCropOverlay();
+}
+
+function confirmEditor(){
+  const src = document.getElementById('canvas-display');
+  const dst = document.getElementById('canvas-hidden');
+  const cw = src.width;   // canvas resolution
+  const ch = src.height;
+
+  // cropPoints are in % of display → map to canvas resolution
+  const xs = cropPoints.map(p => p.x/100 * cw);
+  const ys = cropPoints.map(p => p.y/100 * ch);
+  const x0 = Math.round(Math.min(...xs));
+  const y0 = Math.round(Math.min(...ys));
+  const x1 = Math.round(Math.max(...xs));
+  const y1 = Math.round(Math.max(...ys));
+  const rw = Math.max(10, x1 - x0);
+  const rh = Math.max(10, y1 - y0);
+
+  dst.width  = rw;
+  dst.height = rh;
+  const ctx = dst.getContext('2d');
+  ctx.drawImage(src, x0, y0, rw, rh, 0, 0, rw, rh);
+
+  dst.toBlob((blob) => {
+    if(!blob){ showToast('⚠️ Error al procesar la imagen'); return; }
+    const file = new File([blob], 'scan.jpg', {type:'image/jpeg'});
+    if(editorCallback) editorCallback(file);
+    showScreen('s-renew');
+  }, 'image/jpeg', 0.92);
+}
+
+function cancelEditor(){
+  showScreen('s-renew');
+}
+
+// ══ TOAST ══
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function openLightbox(url){
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightbox-img').src='';
+}
+function renderVerScreen(sec, entityId){
+  applyTheme();
+  const secData = db[sec] || [];
+  const e = secData.find(x=>x.id===entityId);
+  const content = document.getElementById('ver-content');
+  if(!e){
+    content.innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+      <div style="font-size:40px;margin-bottom:16px;">🔍</div>
+      <p style="font-size:16px;">No se encontró la entidad.<br>Verificá la URL.</p>
+    </div>`;
+    return;
+  }
+  const docs = DOCS[sec] || [];
+  const allDocs = docs.filter(d=>d.required);
+  const optDocs = docs.filter(d=>!d.required && e.docs[d.id]);
+  const allVisible = [...allDocs, ...optDocs];
+  const anyBad = allVisible.some(d=>!e.docs[d.id]||isVencido(e.docs[d.id].vto, d.id));
+  const statusHtml = anyBad
+    ? `<div class="ver-status ver-status-bad">🔴 Documentación vencida o incompleta</div>`
+    : `<div class="ver-status ver-status-ok">🟢 Documentación al día</div>`;
+
+  const secLabel = {chofer:'Transportista',tractor:'Tractor',semi:'Semirremolque',transporte:'Empresa de transporte'}[sec]||sec;
+
+  let html = `<div class="ver-header">
+    <div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${secLabel}</div>
+    <div class="ver-entity-name">${e.label}</div>
+    <div class="ver-entity-sub">${e.sub||''}</div>
+    ${statusHtml}
+  </div>`;
+
+  allVisible.forEach(doc=>{
+    const data = e.docs[doc.id];
+    const neverExpires = NEVER_EXPIRE_DOCS.has(doc.id);
+    const vencido = !data || (neverExpires ? false : isVencido(data.vto, doc.id));
+    const dot = vencido ? 'dot-bad':'dot-ok';
+    const badge = neverExpires && data
+      ? `<span class="badge badge-ok">Sin vencimiento</span>`
+      : vencido
+        ? `<span class="badge badge-bad">${data?'Venció '+formatVto(data.vto):'Sin cargar'}</span>`
+        : `<span class="badge badge-ok">Vence ${formatVto(data.vto)}</span>`;
+    const driveBtn = data && data.driveUrl && data.driveUrl!=='#'
+      ? `<a href="${data.driveUrl}" target="_blank" class="ver-btn ver-btn-accent">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ver PDF en Drive</a>` : '';
+    const previewHtml = data && data.previewUrl
+      ? `<div class="ver-img-wrap" onclick="openLightbox('${data.previewUrl}')">
+          <img class="ver-preview" src="${data.previewUrl}" alt="${doc.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div style=padding:20px;text-align:center;background:var(--bg2);color:var(--text3);font-size:12px;>No se pudo cargar la imagen</div>'">
+          <div class="ver-zoom-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </div>
+        </div>`
+      : data ? `<div style="padding:16px;text-align:center;background:var(--bg2);color:var(--text3);font-size:12px;">Preview no disponible · ${data.file||''}</div>` : '';
+
+    html += `<div class="ver-doc">
+      <div class="ver-doc-header">
+        <div class="ver-doc-name"><div class="status-dot ${dot}"></div>${doc.name}</div>
+        ${badge}
+      </div>
+      ${previewHtml}
+      ${data ? `<div class="ver-doc-actions">${driveBtn}</div>` : `<div class="ver-no-doc">Sin documento cargado</div>`}
+    </div>`;
+  });
+
+  html += `<div style="padding:20px;text-align:center;font-size:11px;color:var(--text3);">DocuTransporte · Pregate<br>Última actualización: ${new Date().toLocaleDateString('es-AR')}</div>`;
+  content.innerHTML = html;
+}
+
+// ══ INIT ══
+updateCounts();
+
+// Detectar si es vista resumen por URL
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const ver = params.get('ver');
+  const id  = params.get('id');
+  if(ver && id){
+    showScreen('s-ver');
+    document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">Cargando documentación…</div>`;
+    // Try localStorage first, then fetch estado.json from Drive via state file
+    const saved = localStorage.getItem('dct-db');
+    if(saved){
+      try{ Object.assign(db, JSON.parse(saved)); }catch(e){}
+      if((db[ver]||[]).find(x=>x.id===id)){
+        renderVerScreen(ver, id);
+        return;
+      }
+    }
+    // Fetch estado.json publicly - need stateFileId stored in localStorage
+    const meta = localStorage.getItem('dct-meta');
+    const stateId = meta ? JSON.parse(meta).stateFileId : null;
+    if(stateId){
+      fetch(`https://drive.google.com/uc?export=download&id=${stateId}`)
+        .then(r=>r.json())
+        .then(data=>{ Object.assign(db,data); renderVerScreen(ver,id); })
+        .catch(()=>{ renderVerScreen(ver,id); });
+    } else {
+      // No stateFileId available - show message to open from the same device
+      document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+        <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+        <p style="font-size:15px;line-height:1.6;">Para ver esta página<br>abrí la URL desde el mismo<br>dispositivo donde usás la app.</p>
+      </div>`;
+    }
+  } else {
+    checkTokenFromUrl();
+  }
+})();
+</script>
+</body>
+</html>
