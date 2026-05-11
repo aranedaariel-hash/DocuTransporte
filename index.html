@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1923">
 <title>DocuTransporte · Pregate</title>
@@ -159,9 +160,57 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .ver-img-wrap{position:relative;cursor:zoom-in;}
 .ver-zoom-icon{position:absolute;top:10px;right:10px;width:34px;height:34px;background:rgba(0,0,0,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+
+/* LOGIN */
+#login-wall{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;}
+#login-wall.hidden{display:none;}
+.login-card{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;}
+.login-header{padding:28px 28px 20px;border-bottom:1px solid var(--border);text-align:center;}
+.login-logo{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.login-title{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-0.3px;}
+.login-sub{font-size:12px;color:var(--text2);margin-top:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;}
+.login-body{padding:24px 28px;}
+.login-field{margin-bottom:16px;}
+.login-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px;display:block;}
+.login-input{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;color:var(--text);outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:var(--accent);}
+.login-input::placeholder{color:var(--text3);}
+.login-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s;margin-top:4px;}
+.login-btn:active{background:var(--accent2);transform:scale(0.98);}
+.login-error{font-size:12px;color:var(--bad);text-align:center;margin-top:12px;min-height:18px;}
+.login-footer{padding:16px 28px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--text3);}
+.login-shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 </style>
 </head>
 <body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-wall">
+  <div class="login-card" id="login-card">
+    <div class="login-header">
+      <div class="login-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="login-title">DocuTransporte</div>
+      <div class="login-sub">Pregate · Acceso</div>
+    </div>
+    <div class="login-body">
+      <div class="login-field">
+        <label class="login-label" for="l-user">Usuario</label>
+        <input class="login-input" id="l-user" type="text" placeholder="Ingresá tu usuario" autocomplete="username" autocapitalize="none" onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+      </div>
+      <div class="login-field" style="margin-bottom:4px;">
+        <label class="login-label" for="l-pass">Contraseña</label>
+        <input class="login-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="login-btn" onclick="doLogin()">Ingresar</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
+    <div class="login-footer">Uso interno · Pregate S.A.</div>
+  </div>
+</div>
+
 <div id="app">
 <div class="toast" id="toast"></div>
 
@@ -178,6 +227,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
       <button class="icon-btn" onclick="toggleTheme()">
         <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="icon-btn" onclick="doLogout()" title="Cerrar sesión" style="color:var(--text3);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
     <div class="auth-bar">
@@ -549,7 +601,6 @@ async function checkTokenFromUrl(){
     try{
       const {email} = JSON.parse(auth);
       updateAuthUI(false);
-      const dot = document.getElementById('auth-dot');
       const txt = document.getElementById('auth-text');
       if(txt) txt.textContent = `Reconectando con Drive…`;
       // Silent reconnect via prompt=none redirect
@@ -562,6 +613,8 @@ async function checkTokenFromUrl(){
         prompt: 'none',
         login_hint: email
       });
+      // Save current db before redirecting so nothing is lost
+      localStorage.setItem('dct-db', JSON.stringify(db));
       window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
     }catch(e){}
   }
@@ -659,18 +712,55 @@ async function loadStateFromDrive(){
       const contentRes = await driveRequest(
         `https://www.googleapis.com/drive/v3/files/${stateFileId}?alt=media`
       );
-      const state = await contentRes.json();
-      // Merge Drive state (source of truth) but deduplicate by id
-      const merged = {...{chofer:[],tractor:[],semi:[],transporte:[]}, ...state};
-      ['chofer','tractor','semi','transporte'].forEach(sec=>{
-        const seen = new Set();
-        merged[sec] = (merged[sec]||[]).filter(e=>{ if(seen.has(e.id)) return false; seen.add(e.id); return true; });
+      const driveState = await contentRes.json();
+
+      // Smart merge: Drive is source of truth for structure, but local wins on doc content
+      // This prevents duplication after OAuth redirects overwriting freshly-saved entities
+      const sections = ['chofer','tractor','semi','transporte'];
+      const localDb = db; // current in-memory state (may have unsaved new entries)
+
+      sections.forEach(sec=>{
+        const driveList  = (driveState[sec] || []);
+        const localList  = (localDb[sec]   || []);
+
+        // Build maps by id
+        const driveMap = Object.fromEntries(driveList.map(e=>[e.id, e]));
+        const localMap = Object.fromEntries(localList.map(e=>[e.id, e]));
+
+        // Union of all ids
+        const allIds = new Set([...Object.keys(driveMap), ...Object.keys(localMap)]);
+
+        const merged = [];
+        allIds.forEach(id=>{
+          const d = driveMap[id];
+          const l = localMap[id];
+          if(d && l){
+            // Both exist — pick the one with more loaded docs
+            const dCount = Object.keys(d.docs||{}).length;
+            const lCount = Object.keys(l.docs||{}).length;
+            if(lCount >= dCount){
+              // Local has equal or more docs — merge: keep local docs, drive metadata as base
+              merged.push({...d, docs:{...d.docs, ...l.docs}});
+            } else {
+              merged.push({...l, docs:{...l.docs, ...d.docs}});
+            }
+          } else if(l){
+            // Only local — keep it (newly created, not yet on Drive)
+            merged.push(l);
+          } else {
+            // Only on Drive — keep it
+            merged.push(d);
+          }
+        });
+
+        db[sec] = merged;
       });
-      db = merged;
+
     } else {
       stateFileId = null;
       await saveStateToDrive();
     }
+    localStorage.setItem('dct-db', JSON.stringify(db));
     updateCounts();
     showToast('✓ Estado actualizado desde Drive');
   } catch(e){
@@ -1300,9 +1390,19 @@ async function saveNew(){
   }
   if(!db[currentSection]) db[currentSection]=[];
   db[currentSection].push(entry);
-  if(accessToken){ try{ await saveStateToDrive(); }catch(e){} }
+  // Always persist to localStorage immediately so OAuth redirects don't lose this entry
+  localStorage.setItem('dct-db', JSON.stringify(db));
   updateCounts();
-  showToast('✓ Guardado correctamente');
+  if(accessToken){
+    try{
+      await saveStateToDrive();
+      showToast('✓ Guardado correctamente');
+    }catch(e){
+      showToast('Guardado local (sin Drive)');
+    }
+  } else {
+    showToast('✓ Guardado localmente');
+  }
   setTimeout(()=>{ openEntity(entry.id); },600);
 }
 
@@ -1601,8 +1701,63 @@ function renderVerScreen(sec, entityId){
   content.innerHTML = html;
 }
 
-// ══ INIT ══
-updateCounts();
+// ══ LOGIN ══
+const USERS = [
+  {user:'auditor', pass:'1234', role:'admin'},
+];
+
+function doLogin(){
+  const u = (document.getElementById('l-user').value||'').trim().toLowerCase();
+  const p = (document.getElementById('l-pass').value||'').trim();
+  const match = USERS.find(x=>x.user===u && x.pass===p);
+  const errEl = document.getElementById('login-error');
+  const card  = document.getElementById('login-card');
+  if(match){
+    errEl.textContent='';
+    sessionStorage.setItem('dct-session', JSON.stringify({user:match.user, role:match.role}));
+    document.getElementById('login-wall').classList.add('hidden');
+    // Show username in home
+    const authTxt = document.getElementById('auth-text');
+    if(authTxt && authTxt.textContent.includes('No conectado')){
+      // will be overwritten by Drive connection later — leave it
+    }
+    // Continue normal init
+    checkTokenFromUrl();
+  } else {
+    errEl.textContent='Usuario o contraseña incorrectos';
+    card.classList.remove('login-shake');
+    void card.offsetWidth; // reflow to restart animation
+    card.classList.add('login-shake');
+    document.getElementById('l-pass').value='';
+    document.getElementById('l-pass').focus();
+  }
+}
+
+function checkSession(){
+  const s = sessionStorage.getItem('dct-session');
+  if(s){
+    try {
+      const {user} = JSON.parse(s);
+      document.getElementById('login-wall').classList.add('hidden');
+      return true;
+    } catch(e){}
+  }
+  return false;
+}
+
+function doLogout(){
+  sessionStorage.removeItem('dct-session');
+  // Reset UI
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('login-error').textContent='';
+  document.getElementById('login-wall').classList.remove('hidden');
+  // Sign out of Drive too
+  if(accessToken) signOut();
+}
+
+// Overwrite the bottom init to gate behind login
+
 
 // Detectar si es vista resumen por URL
 (function(){
@@ -1610,9 +1765,12 @@ updateCounts();
   const ver = params.get('ver');
   const id  = params.get('id');
   if(ver && id){
+    // Vista resumen es pública — saltar login
+    document.getElementById('login-wall').classList.add('hidden');
     showScreen('s-ver');
     document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">Cargando documentación…</div>`;
-    // Try localStorage first, then fetch estado.json from Drive via state file
+
+    // Always try localStorage first (works same-device, avoids CORS)
     const saved = localStorage.getItem('dct-db');
     if(saved){
       try{ Object.assign(db, JSON.parse(saved)); }catch(e){}
@@ -1621,25 +1779,49 @@ updateCounts();
         return;
       }
     }
-    // Fetch estado.json publicly - need stateFileId stored in localStorage
+
+    // Try Drive API with token (same-device, has accessToken from hash)
+    const hash = window.location.hash;
+    let tokenFromHash = null;
+    if(hash){
+      const hp = new URLSearchParams(hash.substring(1));
+      tokenFromHash = hp.get('access_token');
+      if(tokenFromHash) window.history.replaceState(null,'',window.location.pathname+'?ver='+ver+'&id='+id);
+    }
     const meta = localStorage.getItem('dct-meta');
     const stateId = meta ? JSON.parse(meta).stateFileId : null;
-    if(stateId){
-      fetch(`https://drive.google.com/uc?export=download&id=${stateId}`)
-        .then(r=>r.json())
-        .then(data=>{ Object.assign(db,data); renderVerScreen(ver,id); })
+    const token = tokenFromHash || accessToken || null;
+
+    if(stateId && token){
+      // Proper Drive API call — no CORS issue
+      fetch(`https://www.googleapis.com/drive/v3/files/${stateId}?alt=media`, {
+        headers:{'Authorization': `Bearer ${token}`}
+      })
+        .then(r=>{ if(!r.ok) throw new Error('Drive error'); return r.json(); })
+        .then(data=>{ Object.assign(db,data); localStorage.setItem('dct-db',JSON.stringify(db)); renderVerScreen(ver,id); })
         .catch(()=>{ renderVerScreen(ver,id); });
+    } else if(stateId){
+      // Cross-device public view without token — show what we have or friendly message
+      if((db[ver]||[]).find(x=>x.id===id)){
+        renderVerScreen(ver, id);
+      } else {
+        document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+          <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+          <p style="font-size:15px;line-height:1.6;">Esta vista de resumen debe abrirse<br>desde el dispositivo donde se opera la app,<br>o desde un enlace que incluya sesión activa.</p>
+        </div>`;
+      }
     } else {
-      // No stateFileId available - show message to open from the same device
-      document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
-        <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
-        <p style="font-size:15px;line-height:1.6;">Para ver esta página<br>abrí la URL desde el mismo<br>dispositivo donde usás la app.</p>
-      </div>`;
+      renderVerScreen(ver, id);
     }
   } else {
-    checkTokenFromUrl();
+    // Verificar sesión activa (sessionStorage persiste mientras el tab esté abierto)
+    if(checkSession()){
+      checkTokenFromUrl();
+    }
+    // Sin sesión: login wall visible; doLogin() llama a checkTokenFromUrl() al ingresar
   }
 })();
+
 </script>
 </body>
 </html>
