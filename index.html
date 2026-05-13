@@ -682,6 +682,8 @@ async function initDrive(){
     showToast('✓ Drive conectado correctamente');
     // Run cleanup in background (non-blocking)
     setTimeout(()=>cleanupOldDriveFiles(), 3000);
+    // One-time dedup of existing data (handles duplicates created before this fix)
+    deduplicateAllSections();
   } catch(e){
     showToast('Error conectando con Drive: '+e.message);
     console.error(e);
@@ -714,47 +716,63 @@ async function loadStateFromDrive(){
       );
       const driveState = await contentRes.json();
 
-      // Smart merge: Drive is source of truth for structure, but local wins on doc content
-      // This prevents duplication after OAuth redirects overwriting freshly-saved entities
+      // Smart merge: union by id, prefer entry with more docs
       const sections = ['chofer','tractor','semi','transporte'];
-      const localDb = db; // current in-memory state (may have unsaved new entries)
+      const localDb = db;
 
       sections.forEach(sec=>{
-        const driveList  = (driveState[sec] || []);
-        const localList  = (localDb[sec]   || []);
+        const driveList = (driveState[sec] || []);
+        const localList = (localDb[sec]   || []);
 
-        // Build maps by id
         const driveMap = Object.fromEntries(driveList.map(e=>[e.id, e]));
         const localMap = Object.fromEntries(localList.map(e=>[e.id, e]));
-
-        // Union of all ids
-        const allIds = new Set([...Object.keys(driveMap), ...Object.keys(localMap)]);
+        const allIds   = new Set([...Object.keys(driveMap), ...Object.keys(localMap)]);
 
         const merged = [];
         allIds.forEach(id=>{
           const d = driveMap[id];
           const l = localMap[id];
           if(d && l){
-            // Both exist — pick the one with more loaded docs
             const dCount = Object.keys(d.docs||{}).length;
             const lCount = Object.keys(l.docs||{}).length;
-            if(lCount >= dCount){
-              // Local has equal or more docs — merge: keep local docs, drive metadata as base
-              merged.push({...d, docs:{...d.docs, ...l.docs}});
-            } else {
-              merged.push({...l, docs:{...l.docs, ...d.docs}});
-            }
-          } else if(l){
-            // Only local — keep it (newly created, not yet on Drive)
-            merged.push(l);
+            merged.push(lCount >= dCount
+              ? {...d, docs:{...d.docs, ...l.docs}}
+              : {...l, docs:{...l.docs, ...d.docs}});
           } else {
-            // Only on Drive — keep it
-            merged.push(d);
+            merged.push(l || d);
           }
         });
 
-        db[sec] = merged;
+        // Secondary dedup: if same label exists twice (race condition created two ids),
+        // keep the one with more docs, merge docs into it
+        const byLabel = {};
+        merged.forEach(e=>{
+          const key = (e.label||'').trim().toUpperCase();
+          if(!byLabel[key]){
+            byLabel[key] = e;
+          } else {
+            const existing = byLabel[key];
+            const existCount = Object.keys(existing.docs||{}).length;
+            const newCount   = Object.keys(e.docs||{}).length;
+            // Merge docs from both, keep the id with more docs
+            if(newCount >= existCount){
+              byLabel[key] = {...e, docs:{...existing.docs, ...e.docs}};
+            } else {
+              byLabel[key] = {...existing, docs:{...e.docs, ...existing.docs}};
+            }
+          }
+        });
+
+        db[sec] = Object.values(byLabel);
       });
+
+      // If dedup changed anything, save back to Drive immediately
+      const driveTotal = ['chofer','tractor','semi','transporte'].reduce((s,sec)=>s+(driveState[sec]||[]).length,0);
+      const mergedTotal = ['chofer','tractor','semi','transporte'].reduce((s,sec)=>s+db[sec].length,0);
+      if(driveTotal !== mergedTotal){
+        // Duplicates were found and removed — save clean state
+        try{ await saveStateToDrive(); }catch(e){}
+      }
 
     } else {
       stateFileId = null;
@@ -770,13 +788,20 @@ async function loadStateFromDrive(){
 
 async function saveStateToDrive(){
   const content = JSON.stringify(db);
-  const blob = new Blob([content], {type:'application/json'});
   if(stateFileId){
     await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${stateFileId}?uploadType=media`, {
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
       body: content
     });
+    // Re-apply public permission on every update (in case it was revoked)
+    try {
+      await driveRequest(`https://www.googleapis.com/drive/v3/files/${stateFileId}/permissions`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({role:'reader', type:'anyone'})
+      });
+    } catch(e){ /* already public or not critical */ }
   } else {
     const boundary = 'boundary123';
     const meta = JSON.stringify({name:STATE_FILE_NAME, parents:[rootFolderId]});
@@ -788,7 +813,6 @@ async function saveStateToDrive(){
     });
     const data = await res.json();
     stateFileId = data.id;
-    // Make estado.json publicly readable so resume view can fetch it
     try {
       await driveRequest(`https://www.googleapis.com/drive/v3/files/${stateFileId}/permissions`, {
         method:'POST',
@@ -797,7 +821,6 @@ async function saveStateToDrive(){
       });
     } catch(e){ console.warn('Could not make state public', e); }
   }
-  // Always save stateFileId to localStorage for resume view
   localStorage.setItem('dct-meta', JSON.stringify({stateFileId}));
   localStorage.setItem('dct-db', JSON.stringify(db));
 }
@@ -830,6 +853,37 @@ async function uploadFileToDrive(file, filename, folderId){
     body
   });
   return await res.json();
+}
+
+// ══ DEDUPLICACIÓN GLOBAL (corre al conectar para limpiar duplicados previos) ══
+async function deduplicateAllSections(){
+  let changed = false;
+  ['chofer','tractor','semi','transporte'].forEach(sec=>{
+    const list = db[sec] || [];
+    const byLabel = {};
+    list.forEach(e=>{
+      const key = (e.label||'').trim().toUpperCase();
+      if(!byLabel[key]){
+        byLabel[key] = {...e};
+      } else {
+        // Merge docs: keep whichever entry has more, union all docs
+        const ex = byLabel[key];
+        byLabel[key] = {
+          ...ex,
+          docs: {...e.docs, ...ex.docs} // ex.docs wins (has more or equal)
+        };
+        changed = true;
+      }
+    });
+    const deduped = Object.values(byLabel);
+    if(deduped.length !== list.length) changed = true;
+    db[sec] = deduped;
+  });
+  if(changed){
+    localStorage.setItem('dct-db', JSON.stringify(db));
+    updateCounts();
+    try{ await saveStateToDrive(); showToast('✓ Duplicados eliminados automáticamente'); }catch(e){}
+  }
 }
 
 // ══ AUTO-CLEANUP: eliminar archivos de Drive con más de 1 año (excepto cédula verde) ══
@@ -1793,7 +1847,7 @@ function doLogout(){
     const token = tokenFromHash || accessToken || null;
 
     if(stateId && token){
-      // Proper Drive API call — no CORS issue
+      // Drive API with token — best option, no CORS
       fetch(`https://www.googleapis.com/drive/v3/files/${stateId}?alt=media`, {
         headers:{'Authorization': `Bearer ${token}`}
       })
@@ -1801,15 +1855,28 @@ function doLogout(){
         .then(data=>{ Object.assign(db,data); localStorage.setItem('dct-db',JSON.stringify(db)); renderVerScreen(ver,id); })
         .catch(()=>{ renderVerScreen(ver,id); });
     } else if(stateId){
-      // Cross-device public view without token — show what we have or friendly message
-      if((db[ver]||[]).find(x=>x.id===id)){
-        renderVerScreen(ver, id);
-      } else {
-        document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
-          <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
-          <p style="font-size:15px;line-height:1.6;">Esta vista de resumen debe abrirse<br>desde el dispositivo donde se opera la app,<br>o desde un enlace que incluya sesión activa.</p>
-        </div>`;
-      }
+      // Cross-device public view: file has anyone/reader permission set on every save
+      // Use the public export URL — works as long as Drive sharing is active
+      fetch(`https://www.googleapis.com/drive/v3/files/${stateId}?alt=media&key=AIzaSyD-placeholder`, {
+        headers: {}
+      })
+      .catch(()=>
+        // Fallback: try public export URL
+        fetch(`https://drive.google.com/uc?export=download&id=${stateId}`, {mode:'cors'})
+      )
+      .then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
+      .then(data=>{ Object.assign(db,data); localStorage.setItem('dct-db',JSON.stringify(db)); renderVerScreen(ver,id); })
+      .catch(()=>{
+        // Last resort: render from whatever localStorage has
+        if((db[ver]||[]).find(x=>x.id===id)){
+          renderVerScreen(ver, id);
+        } else {
+          document.getElementById('ver-content').innerHTML=`<div style="padding:60px 20px;text-align:center;color:var(--text3);">
+            <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+            <p style="font-size:15px;line-height:1.6;">Abrí este enlace desde el mismo<br>dispositivo y navegador donde usás la app.</p>
+          </div>`;
+        }
+      });
     } else {
       renderVerScreen(ver, id);
     }
